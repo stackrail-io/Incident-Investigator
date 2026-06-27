@@ -9,7 +9,6 @@
   <a href="https://github.com/stackrail/incident-investigator/releases"><img src="https://img.shields.io/badge/version-0.1.0-0ea5e9?style=for-the-badge" alt="Version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License"/></a>
   <a href="https://stackrail.io/demo"><img src="https://img.shields.io/badge/Book%20a%20Demo-StackRail-f97316?style=for-the-badge" alt="Book a Demo"/></a>
-  <a href="https://stackrail.io/aurora"><img src="https://img.shields.io/badge/Try%20Aurora%20Live-→-a855f7?style=for-the-badge" alt="Try Aurora Live"/></a>
 </p>
 
 # Incident Investigator
