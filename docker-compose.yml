@@ -1,0 +1,12 @@
+services:
+  incident-investigator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: stackrail/incident-investigator:0.1.0
+    container_name: incident-investigator
+    # MCP uses stdio. Keep stdin open when attaching an MCP client.
+    stdin_open: true
+    tty: true
+    restart: "no"
+    # No ports exposed — the server communicates over stdin/stdout only.

@@ -1,0 +1,90 @@
+name: Bug report
+description: Report incorrect behavior, crashes, or unexpected investigation results
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please include enough detail for us to reproduce the issue.
+
+        **Security vulnerabilities:** do not use this form — see [SECURITY.md](https://github.com/stackrail/incident-investigator/blob/main/SECURITY.md).
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Server version from startup logs or README badge
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How are you running the server?
+      options:
+        - go run / local binary
+        - Docker
+        - docker compose
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mcp_client
+    attributes:
+      label: MCP client
+      options:
+        - Cursor
+        - Claude Code
+        - Codex
+        - Goose
+        - OpenHands
+        - Custom / other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: MCP tool calls, evidence payloads, or a minimal session flow
+      placeholder: |
+        1. start_investigation with question "..."
+        2. submit_evidence with ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (stderr)
+      description: Paste relevant log lines from stderr (not stdout — that is MCP traffic)
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues before opening this report
+          required: true
+        - label: This is not a security vulnerability
+          required: true

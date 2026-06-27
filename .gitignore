@@ -1,0 +1,15 @@
+# Binaries (repo root only — do not match cmd/incident-investigator/)
+/incident-investigator
+/bin/
+/dist/
+*.exe
+
+# Test / smoke artifacts
+/.smoke/
+*.out
+coverage.*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

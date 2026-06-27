@@ -1,0 +1,15 @@
+.git
+.github
+.smoke
+bin
+dist
+*.exe
+coverage.*
+.DS_Store
+.idea
+.vscode
+
+# Documentation and local dev artifacts are not needed in the image.
+*.md
+!README.md
+docs
