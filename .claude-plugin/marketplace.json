@@ -13,7 +13,7 @@
       "name": "incident-investigator",
       "source": "./plugins/incident-investigator",
       "description": "Stateful MCP investigation runtime: evidence graph, competing hypotheses, timeline, and postmortem generation.",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "author": {
         "name": "StackRail"
       },

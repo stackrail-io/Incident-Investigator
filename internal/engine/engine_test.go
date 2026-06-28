@@ -14,7 +14,7 @@ func session(service, question string, ev ...*model.Evidence) *model.Session {
 		Question: question,
 		Service:  service,
 		Evidence: ev,
-		Graph:    model.NewGraph(),
+		Graph:    model.NewEmptyGraphView(),
 	}
 }
 

@@ -13,59 +13,255 @@
 
 # Incident Investigator
 
-An open-source, **vendor-neutral incident investigation engine** exposed as an
+An open-source **AI investigation runtime** exposed as an
 [MCP](https://modelcontextprotocol.io) server.
+
+## Why AI assistants struggle with incident investigations
+
+Today's AI assistants can **gather** evidence — query logs, pull metrics, read
+alerts — but they cannot reliably **investigate**. They lack a stateful runtime
+that continuously answers four questions:
+
+1. **What do I currently know?** — hypotheses, coverage, contradictions
+2. **What do I still need?** — blocking questions, highest-value next evidence
+3. **Can I answer yet?** — sufficiency, confidence thresholds
+4. **Why do I believe this?** — reasoning trace, journal, confidence breakdown
+
+Without this, assistants either stop too early (under-confident guesses) or
+overstate conclusions (confident but unsupported). Incident Investigator fills
+that gap: it owns **reasoning**, not data collection.
 
 Incident Investigator does **not** connect to Kubernetes, AWS, GitHub, Slack,
 Datadog, Prometheus, or any other system. It has no connectors and no vendor
 SDKs. Instead, it is a **stateful investigation runtime** that guides an AI agent
-through an investigation: it requests the evidence it needs, reasons over the
-evidence the agent submits, builds an evidence graph, generates competing
-hypotheses, and produces a final investigation report.
+through multiple reasoning iterations: it requests the highest-value evidence,
+reasons over what the agent submits, tracks confidence evolution, and produces a
+final report only when the investigation is sufficient.
 
 It works with any MCP-capable assistant — Claude Code, Codex, Cursor, Goose,
 OpenHands, and others.
 
 ## Core philosophy
 
-> The AI assistant gathers evidence. The Investigation Engine reasons over evidence.
+> An investigation is not a collection of evidence — it is a collection of **questions**.
+> Evidence only exists to answer questions. Questions validate hypotheses. Hypotheses answer the investigation goal.
 
-| The AI assistant is responsible for                          | The engine is responsible for                                                 |
+| The AI assistant is responsible for                          | The runtime is responsible for                                                 |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| Deciding which external tools to call                        | Maintaining investigation state                                               |
-| Collecting logs, metrics, alerts, deployments, traces, etc.  | Requesting additional evidence (dynamic planner)                              |
-| Knowing what CloudWatch / Datadog / Kubernetes are           | Building & correlating an evidence graph                                      |
-|                                                              | Generating competing hypotheses + confidence scoring                          |
-|                                                              | Contradiction detection, missing-evidence detection, blast-radius estimation  |
-|                                                              | Timeline generation and postmortem / report generation                       |
+| Deciding which external tools to call                        | Executing the **Investigation Protocol** (playbook-driven)                    |
+| Collecting logs, metrics, alerts, deployments, traces, etc.  | Maintaining the **Investigation Plan** — the brain of the investigation       |
+| Answering protocol questions with evidence                   | Generating **questions** and **evidence requests** from the playbook          |
+| Knowing what CloudWatch / Datadog / Kubernetes are           | Resolving questions → updating hypotheses → computing confidence                |
+|                                                              | Building **Investigation Graph**, question graph, reasoning trace, and journal |
 
-The engine only understands **evidence categories**. It never depends on vendor
+The runtime only understands **evidence categories**. It never depends on vendor
 schemas.
 
-## Architecture
+## Architecture — Investigation Protocol
+
+The runtime executes an **Investigation Protocol**, not just a pipeline of engines.
+Every investigation follows the same hierarchy:
 
 ```
-                MCP Server  (cmd/incident-investigator)
-                     │
-            Investigation Runtime  (internal/runtime)
-                     │
-   ┌─────────────────┼──────────────────────────────┐
- Session          Planner                         Engines (internal/engine)
- (model)        (what to collect next)            ├─ Reasoner / Signals
-   │                 │                            ├─ Hypothesis Engine
- Evidence Store   Evidence Graph   Timeline       ├─ Confidence Engine
- (in-memory)         │                            ├─ Contradiction Engine
-   │             Hypotheses + Confidence          ├─ Missing-Evidence Engine
- History          Report Generator                ├─ Blast-Radius Estimator
-                                                  └─ Timeline / Graph builders
+Investigation
+     ↓
+   Goal
+     ↓
+ Questions  ← driven by Investigation Playbooks
+     ↓
+ Evidence Requests  (linked to specific questions)
+     ↓
+ Evidence  (submitted by the AI assistant)
+     ↓
+ Question Resolution
+     ↓
+ Hypotheses  (updated by playbook rules, not directly by reasoners)
+     ↓
+ Confidence → Report
 ```
+
+Protocol lifecycle:
+
+```
+Create Investigation → Generate Plan → Create Questions → Generate Evidence Requests
+     → Submit Evidence → Resolve Questions → Update Hypotheses
+     → Generate Additional Questions → Repeat → Investigation Complete
+```
+
+```
+   AI Assistant  (gathers evidence to answer protocol questions)
+         │
+         ▼
+   Incident Investigator MCP
+         │
+         ▼
+   Investigation Runtime
+         │
+         ├── Investigation Plan  (questions, evidence requests, stage, confidence)
+         ├── Investigation Playbooks  (declarative question + hypothesis rules)
+         ├── **Investigation Graph**  (canonical model — evidence, questions, hypotheses, services, …)
+         ├── Question Graph  (question dependencies, protocol view)
+         ├── Question Resolution Engine
+         ├── Sufficiency / Coverage / Strategy engines
+         └── **Multi-Reasoner Orchestrator** → capability reasoners → validated actions
+```
+
+## Multi-Reasoner Architecture
+
+Incident Investigator is **not tied to one reasoning strategy**. The runtime
+orchestrates multiple independent reasoning engines. Each engine contributes
+**observations as declarative actions**; the runtime validates, merges, and applies
+them. The Investigation Graph remains the canonical source of truth.
+
+> Reasoners do not investigate. Reasoners make observations. The runtime conducts
+> the investigation.
+
+```
+Investigation Runtime
+        │
+Investigation Graph
+        │
+Reasoning Orchestrator
+        │
+  ┌─────┴─────┬─────────────┬──────────────┐
+  │           │             │              │
+Temporal   Causal    Hypothesis   Consistency   Semantic
+Reasoner   Reasoner  Reasoner     Reasoner      Reasoner
+        │
+Reasoning Action List
+        │
+Runtime Validation → Apply → Updated Investigation
+```
+
+### Capability reasoners (default)
+
+| Reasoner | Priority | Responsibility |
+| -------- | -------- | -------------- |
+| **Temporal** | 100 | Timeline ordering, evidence planning, temporal graph edges |
+| **Causal** | 90 | Graph-native root cause, blast radius, strongest paths (graph only) |
+| **Hypothesis** | 80 | Competing hypotheses, confidence, coverage, strategy, graph rebuild |
+| **Consistency** | 70 | Contradictions, impossible sequences, graph integrity |
+| **Semantic** | 50 | LLM abstraction (interface + mock only — no vendor SDKs) |
+
+Reasoners are classified by **what kind of reasoning they perform**, not how they
+are implemented. A `SemanticReasoner` may use an LLM today and a local model
+tomorrow without architectural changes.
+
+### Reasoning actions
+
+Reasoners never mutate session state directly. They emit actions such as
+`IncreaseHypothesisConfidence`, `CreateQuestion`, `LinkGraphNodes`,
+`MarkContradiction`, `ReplaceHypotheses`, and `UpdateGraph`. The runtime validates
+every action (resolved questions, confidence limits, invalid nodes) before apply.
+
+### Orchestration strategies
+
+Configurable: `sequential` (default), `parallel`, `weighted_voting`, `priority`,
+`consensus`. Conflicting confidence deltas are merged with weighted averages and
+logged in **reasoning cycles**.
+
+### Explainability
+
+Every recompute persists a `ReasoningCycle` (reasoners run, actions applied/rejected,
+duration). Use `get_reasoning_cycles` to replay any iteration.
+
+## Incident Intelligence
+
+Incident Investigator no longer performs isolated investigations. Every completed
+investigation becomes **reusable knowledge**. Future investigations improve over time by:
+
+- finding similar past incidents
+- reusing investigation patterns
+- calibrating confidence against historical outcomes
+- recommending better evidence and questions
+- accelerating root cause analysis
+
+Historical learning lives in a separate **Incident Intelligence** subsystem. The
+investigation runtime remains **stateless with respect to history** — it only asks
+the Intelligence API questions; it never reads the archive directly.
+
+```
+Completed Investigation
+        ↓
+   Snapshot (immutable)
+        ↓
+ Pattern Extraction
+        ↓
+ Investigation Archive
+        ↓
+ Similarity Search ──→ Pattern Recommendation
+        ↓                      ↓
+        └──────────→ Investigation Runtime
+```
+
+```
+                 Investigation Runtime
+                        │
+             Incident Intelligence API
+                        │
+      ┌──────────────┬──────────────┬──────────────┐
+      │              │              │              │
+ Similarity      Pattern Engine   Confidence Engine
+                        │
+             Investigation Archive
+                        │
+        Investigation Graph Snapshots
+```
+
+### Core components
+
+| Component | Interface | Default implementation |
+| --------- | --------- | ---------------------- |
+| Archive | `InvestigationArchive` | `MemoryArchive` (in-memory) |
+| Similarity | `SimilarityEngine` | `HeuristicSimilarityEngine` (deterministic) |
+| Patterns | `PatternEngine` | `HeuristicPatternEngine` (built-in library + history) |
+| Calibration | `ConfidenceCalibrator` | `HeuristicCalibrator` (historical accuracy blend) |
+
+When an investigation completes, the runtime stores an immutable
+`InvestigationSnapshot` (goal, root cause, timeline, knowledge graph, hypotheses,
+evidence summary, fingerprint, metadata). Snapshots are indexed by
+`InvestigationFingerprint` (goal, graph/timeline hashes, services, categories) to
+accelerate similarity search.
+
+**Similarity** is deterministic — no embeddings or vector databases. The engine
+compares goal, question overlap, service, evidence categories, graph topology,
+timeline shape, hypothesis overlap, root cause, and fingerprint partial matches.
+
+**Pattern library** includes reusable playbooks such as Deployment Failure,
+Certificate Expiry, Database Saturation, and Retry Storm. Patterns recommend
+questions and expected evidence categories with confidence scores.
+
+**Confidence calibration** blends raw hypothesis confidence with historical accuracy
+for similar investigations and always returns an explanation (`CalibrationExplanation`
+with sample size, correct count, and supporting history).
+
+**Lessons learned** and **investigation recommendations** (typical missing evidence,
+root causes, questions) are returned alongside similarity matches. The runtime
+decides whether to use them.
+
+Future archive backends (PostgreSQL, Neo4j, S3, object storage) plug in behind
+`InvestigationArchive` without changing runtime code. There are **no** vector
+databases, embedding APIs, or external AI services in the intelligence layer.
+
+### Intelligence API
+
+| API method | Purpose |
+| ---------- | ------- |
+| `FindSimilarInvestigations(...)` | Match current investigation to archived cases; returns lessons and recommendations |
+| `SuggestPatterns(...)` | Recurring investigation patterns from history with recommended questions |
+| `CalibrateConfidence(...)` | Adjust raw confidence using historical outcomes with explanation |
+
+The default `MemoryService` archives snapshots when investigations finish.
+Calibration also runs automatically during recompute and on `finish_investigation`.
+
+MCP tools: `find_similar_investigations`, `suggest_patterns`, `calibrate_confidence`.
 
 There are **no** connectors. No AWS SDK, no Kubernetes SDK, no GitHub SDK, no
 Slack SDK, no Prometheus SDK, no Datadog SDK. Nothing.
 
-Every engine is defined behind a Go interface (see `internal/runtime`'s
-`Engines` struct), so the built-in heuristic implementations can be swapped for
-alternatives (e.g. LLM-backed) without touching the runtime or MCP layers.
+Every engine is defined behind a Go interface, so the built-in heuristic
+implementations can be swapped for alternatives (e.g. LLM-backed playbooks) without
+touching the runtime or MCP layers.
 
 ## Evidence categories
 
@@ -100,10 +296,36 @@ estimation.
 
 | Tool                       | Purpose                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------ |
-| `start_investigation`      | Begin a session. Returns `session_id`, `status`, and the `required_evidence` to collect first.   |
-| `submit_evidence`          | Add evidence. Returns updated `progress`, `confidence`, `missing_evidence`, `next_required_evidence`, `updated_hypotheses`, `contradictions`. |
-| `get_investigation_status` | Current hypotheses, confidence, graph, timeline, missing evidence, blast radius, progress.       |
-| `finish_investigation`     | Final report: executive summary, timeline, evidence, hypotheses, root-cause candidates, graph, blast radius, contradictions, missing evidence, recommendations, confidence, and a markdown postmortem. |
+| `start_investigation`      | Begin a session. Returns **plan**, **questions**, first **evidence requests**, stage, hypotheses. |
+| `submit_evidence`          | Submit evidence to resolve questions. Returns resolved/new questions, updated plan, confidence delta. |
+| `get_investigation_status` | Full snapshot: plan, question graph, questions, evidence requests, resolution history, metrics. |
+| `get_investigation_plan`   | Return the complete investigation plan.                                                          |
+| `list_open_questions`      | Unresolved questions sorted by priority.                                                         |
+| `resolve_question`         | Explicitly resolve a question when evidence is conclusive.                                       |
+| `explain_investigation`    | **Primary debugging tool** — plan, questions, graph, stage, trace, confidence.                   |
+| `explain_reasoning`        | Hypothesis-level reasoning trace, coverage, sufficiency, journal.                                |
+| `get_graph`                | Return the full investigation graph (all nodes and typed relationships).                       |
+| `query_graph`              | Run graph queries: upstream causes, downstream impact, supporting evidence, contradictions, …  |
+| `get_subgraph`             | Extract a filtered subgraph by node type or explicit node ids.                                   |
+| `explain_path`             | Explain a causal path between two nodes with supporting evidence per hop.                        |
+| `get_reasoning_cycles`     | Replay reasoning iterations: reasoners, actions, applied/rejected, timing.                         |
+| `find_similar_investigations` | Find archived investigations similar to the current session; includes lessons and recommendations. |
+| `suggest_patterns`         | Suggest recurring investigation patterns from historical data.                                     |
+| `calibrate_confidence`     | Calibrate hypothesis confidence using history; returns original, adjusted, and explanation.          |
+| `finish_investigation`     | Final report when the investigation is ready to conclude.                                         |
+
+### Investigation goals
+
+Set `goal` on `start_investigation` to change what the strategy engine prioritizes:
+
+| Goal | Prioritizes |
+| ---- | ----------- |
+| `root_cause` (default) | Deployments, logs, alerts |
+| `timeline` | Alerts, deployments, infrastructure events |
+| `blast_radius` | Metrics, traces, alerts |
+| `deployment_verification` | Deployments, configuration changes |
+| `performance_regression` | Metrics, traces, logs |
+| `availability` | Alerts, metrics, infrastructure |
 
 ### Example: `start_investigation`
 
@@ -113,6 +335,7 @@ Request:
 {
   "question": "Why did checkout fail yesterday?",
   "service": "checkout-api",
+  "goal": "root_cause",
   "time_window": { "start": "2026-06-27T09:00:00Z", "end": "2026-06-27T09:30:00Z" }
 }
 ```
@@ -123,32 +346,147 @@ Response (abridged):
 {
   "session_id": "inv-…",
   "status": "collecting_evidence",
-  "required_evidence": [
-    { "category": "deployment_events", "priority": "high", "reason": "Need to determine whether a deployment preceded the incident." },
-    { "category": "application_logs",  "priority": "high", "reason": "Need application logs to characterize the failure mode." },
-    { "category": "metrics",           "priority": "medium" }
-  ]
+  "state": "waiting_for_evidence",
+  "goal": "root_cause",
+  "strategy": [
+    {
+      "priority": 1,
+      "category": "deployment_events",
+      "reason": "Need to determine whether a deployment preceded the incident.",
+      "expected_confidence_gain": 35
+    }
+  ],
+  "required_evidence": [ … ]
 }
 ```
 
-## The investigation lifecycle
+## The investigation protocol
+
+Each iteration follows the runtime rules:
+
+1. **Questions** create evidence requests
+2. **Evidence requests** gather evidence (via the AI assistant)
+3. **Evidence** resolves questions
+4. **Resolved questions** update hypotheses (via playbook rules)
+5. **Hypotheses** update confidence
+6. **Confidence** determines completion
 
 ```
 start_investigation
-   └─> planner determines required evidence
-         └─> submit_evidence  (repeat)
-               └─> planner re-evaluates, hypotheses & confidence update
-                     └─> confidence sufficient?  ── no ──> keep collecting
-                                                  └─ yes ─> finish_investigation
+   └─> generate investigation plan + initial questions
+         └─> list_open_questions / get_investigation_plan
+               └─> submit_evidence  (repeat — gather evidence for open questions)
+                     └─> questions resolve → hypotheses update → new questions generated
+                           └─> explain_investigation (inspect at any point)
+                                 └─> finish_investigation when sufficient
 ```
+
+Use `explain_investigation` as the primary debugging endpoint. The investigation
+**journal** records every state change for replay.
 
 Everything is **incremental** and held **in memory** for one investigation —
 nothing is recomputed from a database and there is no persistence layer (yet).
 
+## Investigation Playbooks
+
+Playbooks are declarative investigation scripts. The runtime executes playbooks;
+reasoners generate them — reasoners never manipulate hypotheses directly.
+
+Example playbook fragment:
+
+```
+QUESTION deploy-before-errors
+Did deployment happen before errors?
+REQUIRES deployment_events application_logs alert_events
+IF TRUE Increase hypothesis-deployment-caused 25
+IF FALSE Decrease hypothesis-deployment-caused 40
+
+QUESTION config-changed
+Was configuration changed?
+REQUIRES configuration_changes deployment_events
+TRIGGER config
+GENERATES pods-restarted
+IF TRUE Increase hypothesis-configuration-change 30
+```
+
+Default playbooks ship for `root_cause`, `timeline`, and `blast_radius` goals.
+See `internal/engine/playbook/` for the full definitions.
+
+## Investigation Graph
+
+The **Investigation Graph** is the canonical representation of an investigation.
+Every engine interacts with the graph — evidence, questions, hypotheses, evidence
+requests, services, deployments, and conclusions are all **nodes** connected by
+**typed relationships**. The graph — not the LLM — is the source of truth.
+
+```
+Investigation Runtime
+        ↓
+Investigation Graph
+        ↓
+Planner · Reasoners · Timeline · Hypotheses · Reports · Queries
+```
+
+### Node types
+
+`investigation`, `question`, `evidence`, `evidence_request`, `hypothesis`,
+`service`, `application`, `deployment`, `pod`, `configuration`, `metric`,
+`alert`, `trace`, `database`, `api`, `timeline_event`, `incident`, `conclusion`,
+`recommendation`, `region`, `cluster`, `customer_impact`, `custom`
+
+### Edge types
+
+Each edge carries **confidence**, **weight**, **timestamp**, **reason**, and
+**evidence references**:
+
+`supports`, `contradicts`, `causes`, `triggered`, `depends_on`, `occurred_before`,
+`occurred_after`, `generated`, `resolves`, `requests`, `belongs_to`, `observed_on`,
+`recovered_by`, `correlates_with`
+
+### Storage
+
+Graph logic is **storage-independent**. The `GraphStore` interface supports
+`AddNode`, `UpdateNode`, `DeleteNode`, `GetNode`, `AddEdge`, `RemoveEdge`,
+`GetEdges`, and `Traverse`. Only `MemoryGraphStore` ships today — Neo4j,
+Memgraph, PostgreSQL, and other backends can be added later without changing
+runtime behavior.
+
+### Graph queries
+
+| Query kind | Example target | Returns |
+| ---------- | -------------- | ------- |
+| `upstream` | `checkout-api` | Deployment → Configuration → … |
+| `downstream` | `checkout-api` | Impacted services and effects |
+| `supporting_evidence` | hypothesis id | Evidence nodes supporting a hypothesis |
+| `contradictions` | hypothesis id | Contradicting evidence |
+| `unanswered_questions` | — | Open protocol questions |
+| `service_evidence` | `checkout-api` | All evidence linked to a service |
+| `blast_radius` | `checkout-api` | Downstream impact subgraph |
+| `shortest_causal_path` | `deploy->errors` | Shortest causal chain |
+| `strongest_path` | node id | Highest-confidence outgoing causal edge |
+
+Traversal modes (BFS, DFS, shortest path, topological, causal, timeline) are
+independent from storage. Subgraphs (deployment, database, hypothesis, timeline,
+customer impact) feed into reports.
+
+### Example: `explain_path`
+
+```json
+{
+  "session_id": "inv-…",
+  "from": "deploy",
+  "to": "recovery"
+}
+```
+
+Returns a hop-by-hop causal explanation where every edge references supporting
+evidence — e.g. Deployment → Configuration Changed → Pods Restarted → Readiness
+Failed → Traffic Shift → API Errors → Rollback → Recovery.
+
 ## Install
 
 Pre-built binaries are published on [GitHub Releases](https://github.com/stackrail-io/Incident-Investigator/releases).
-Push a `v*` tag (e.g. `v0.1.0`) to trigger the release workflow and publish installers.
+Push a `v*` tag (e.g. `v1.0.0`) to trigger the release workflow and publish installers.
 
 ### macOS / Linux
 
@@ -165,7 +503,7 @@ INSTALL_DIR="$HOME/.local/bin" curl -fsSL .../install.sh | bash
 Install a specific version:
 
 ```bash
-INCIDENT_INVESTIGATOR_VERSION=0.1.0 curl -fsSL .../install.sh | bash
+INCIDENT_INVESTIGATOR_VERSION=1.0.0 curl -fsSL .../install.sh | bash
 ```
 
 Verify:
@@ -183,7 +521,7 @@ irm https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/sc
 Specific version:
 
 ```powershell
-$env:INCIDENT_INVESTIGATOR_VERSION = "0.1.0"
+$env:INCIDENT_INVESTIGATOR_VERSION = "1.0.0"
 irm https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install.ps1 | iex
 ```
 
@@ -192,8 +530,8 @@ irm https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/sc
 Pull and run (stdio MCP server):
 
 ```bash
-docker pull ghcr.io/stackrail-io/incident-investigator:0.1.0
-docker run -i --rm ghcr.io/stackrail-io/incident-investigator:0.1.0
+docker pull ghcr.io/stackrail-io/incident-investigator:1.0.0
+docker run -i --rm ghcr.io/stackrail-io/incident-investigator:1.0.0
 ```
 
 Or use the install helper (pulls the image and prints MCP config):
@@ -205,8 +543,8 @@ curl -fsSL https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/
 Build locally:
 
 ```bash
-docker build -t stackrail/incident-investigator:0.1.0 .
-docker run -i --rm stackrail/incident-investigator:0.1.0
+docker build -t stackrail/incident-investigator:1.0.0 .
+docker run -i --rm stackrail/incident-investigator:1.0.0
 
 # Or with compose
 docker compose up --build
@@ -282,7 +620,7 @@ After installing, point your MCP client at the binary or container:
   "mcpServers": {
     "incident-investigator": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/stackrail-io/incident-investigator:0.1.0"]
+      "args": ["run", "-i", "--rm", "ghcr.io/stackrail-io/incident-investigator:1.0.0"]
     }
   }
 }
@@ -360,6 +698,11 @@ plugins/incident-investigator/    Claude Code + Codex plugin bundle
 .claude-plugin/marketplace.json   Claude marketplace catalog
 .agents/plugins/marketplace.json  Codex marketplace catalog
 internal/model/                   Vendor-neutral domain types (evidence, graph, …)
+internal/reasoning/               Action model, validator, merger, hybrid orchestrator
+internal/reasoners/               Capability reasoners (temporal, causal, hypothesis, …)
+internal/intelligence/            Incident Intelligence (archive, similarity, patterns, calibration)
+internal/intelligence/fixtures/   50+ completed investigation corpus for intelligence tests
+internal/graph/                   Investigation graph store, queries, traversal
 internal/engine/                  Planner, hypotheses, confidence, contradictions, …
 internal/runtime/                 Stateful runtime + in-memory store
 internal/mcpserver/               MCP tool definitions and DTOs
@@ -368,8 +711,11 @@ internal/fixtures/                Realistic incident scenarios used by tests
 
 ## Testing
 
-Realistic incident fixtures (`internal/fixtures`) validate the planner, evidence
-graph, timeline, hypotheses, and confidence end to end:
+Realistic incident fixtures (`internal/fixtures`) validate the planner, investigation
+graph, timeline, hypotheses, and confidence end to end. The intelligence corpus
+(`internal/intelligence/fixtures`, 56 completed snapshots) validates similarity
+search, pattern extraction, confidence calibration, knowledge reuse, and false-positive
+filtering.
 
 - Bad deployment
 - Database outage

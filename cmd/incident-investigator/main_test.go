@@ -13,8 +13,8 @@ func TestVersionCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("version command failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(string(out), "0.1.0") {
-		t.Fatalf("expected version output to contain 0.1.0, got %q", out)
+	if !strings.Contains(string(out), "1.0.0") {
+		t.Fatalf("expected version output to contain 1.0.0, got %q", out)
 	}
 }
 

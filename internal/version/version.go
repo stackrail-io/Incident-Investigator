@@ -5,7 +5,7 @@ import "fmt"
 
 var (
 	// Version is the semantic release version.
-	Version = "0.1.0"
+	Version = "1.0.0"
 	// Commit is the git commit hash at build time.
 	Commit = "none"
 	// Date is the build timestamp (UTC).

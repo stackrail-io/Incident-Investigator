@@ -1,5 +1,5 @@
 // Package fixtures provides realistic, vendor-neutral incident scenarios used to
-// exercise the planner, evidence graph, timeline, hypotheses and confidence
+// exercise the planner, investigation graph, timeline, hypotheses and confidence
 // engines. Each fixture submits evidence in batches to mimic an assistant
 // progressively gathering data.
 package fixtures

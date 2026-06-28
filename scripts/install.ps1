@@ -11,7 +11,7 @@
   irm https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install.ps1 | iex
 
 .EXAMPLE
-  $env:INCIDENT_INVESTIGATOR_VERSION = "0.1.0"; irm .../install.ps1 | iex
+  $env:INCIDENT_INVESTIGATOR_VERSION = "1.0.0"; irm .../install.ps1 | iex
 #>
 
 $ErrorActionPreference = "Stop"

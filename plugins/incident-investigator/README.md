@@ -17,7 +17,7 @@ Claude Code and Codex plugin bundle for the [Incident Investigator](https://gith
 Install **one** of:
 
 - Native binary: `curl -fsSL https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install.sh | bash`
-- Docker: `docker pull ghcr.io/stackrail-io/incident-investigator:0.1.0`
+- Docker: `docker pull ghcr.io/stackrail-io/incident-investigator:1.0.0`
 
 The plugin's `run-mcp.sh` wrapper tries the binary on `PATH` first, then Docker.
 

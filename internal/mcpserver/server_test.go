@@ -45,6 +45,11 @@ func TestEndToEndOverMCP(t *testing.T) {
 		"submit_evidence":          false,
 		"get_investigation_status": false,
 		"finish_investigation":     false,
+		"explain_reasoning":        false,
+		"explain_investigation":    false,
+		"get_investigation_plan":   false,
+		"resolve_question":         false,
+		"list_open_questions":      false,
 	}
 	for _, tl := range tools.Tools {
 		if _, ok := wantTools[tl.Name]; ok {
@@ -106,6 +111,45 @@ func TestEndToEndOverMCP(t *testing.T) {
 	}
 	if statusOut.Graph == nil || len(statusOut.Graph.Nodes) == 0 {
 		t.Errorf("expected a populated graph in status")
+	}
+	if statusOut.State == "" {
+		t.Error("expected investigation state in status")
+	}
+
+	// explain_reasoning
+	var explainOut runtime.ExplainOutput
+	callInto(t, ctx, cs, "explain_reasoning", map[string]any{
+		"session_id": startOut.SessionID,
+	}, &explainOut)
+	if explainOut.SessionID != startOut.SessionID {
+		t.Errorf("explain session = %q", explainOut.SessionID)
+	}
+	if len(explainOut.Journal) == 0 {
+		t.Error("expected journal in explain output")
+	}
+
+	var planOut mcpserver.PlanOutput
+	callInto(t, ctx, cs, "get_investigation_plan", map[string]any{
+		"session_id": startOut.SessionID,
+	}, &planOut)
+	if planOut.Plan == nil || len(planOut.Plan.Questions) == 0 {
+		t.Error("expected plan with questions")
+	}
+
+	var openOut mcpserver.OpenQuestionsOutput
+	callInto(t, ctx, cs, "list_open_questions", map[string]any{
+		"session_id": startOut.SessionID,
+	}, &openOut)
+	if len(openOut.Questions) == 0 {
+		t.Error("expected open questions")
+	}
+
+	var invOut runtime.ExplainInvestigationOutput
+	callInto(t, ctx, cs, "explain_investigation", map[string]any{
+		"session_id": startOut.SessionID,
+	}, &invOut)
+	if invOut.Plan == nil {
+		t.Error("expected plan in explain_investigation")
 	}
 
 	// finish_investigation

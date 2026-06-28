@@ -72,10 +72,10 @@ func TestFixtures(t *testing.T) {
 			}
 
 			// Graph must have nodes and at least one edge.
-			if len(sess.Graph.Nodes()) == 0 {
+			if sess.Graph == nil || len(sess.Graph.Nodes) == 0 {
 				t.Errorf("expected graph nodes")
 			}
-			if len(sess.Graph.Edges()) == 0 {
+			if len(sess.Graph.Edges) == 0 {
 				t.Errorf("expected graph edges")
 			}
 

@@ -6,12 +6,12 @@
 #
 # Environment variables:
 #   INCIDENT_INVESTIGATOR_IMAGE   Docker image (default: ghcr.io/stackrail-io/incident-investigator:latest)
-#   INCIDENT_INVESTIGATOR_TAG     Image tag when using default image (default: 0.1.0)
+#   INCIDENT_INVESTIGATOR_TAG     Image tag when using default image (default: 1.0.0)
 
 set -euo pipefail
 
-IMAGE="${INCIDENT_INVESTIGATOR_IMAGE:-ghcr.io/stackrail-io/incident-investigator:0.1.0}"
-FALLBACK_IMAGE="${INCIDENT_INVESTIGATOR_FALLBACK_IMAGE:-stackrail/incident-investigator:0.1.0}"
+IMAGE="${INCIDENT_INVESTIGATOR_IMAGE:-ghcr.io/stackrail-io/incident-investigator:1.0.0}"
+FALLBACK_IMAGE="${INCIDENT_INVESTIGATOR_FALLBACK_IMAGE:-stackrail/incident-investigator:1.0.0}"
 
 err() {
   echo "install-docker.sh: $*" >&2

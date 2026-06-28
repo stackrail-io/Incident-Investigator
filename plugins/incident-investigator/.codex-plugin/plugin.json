@@ -1,6 +1,6 @@
 {
   "name": "incident-investigator",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Vendor-neutral incident investigation MCP engine. Guides AI agents through evidence collection, hypothesis generation, and postmortem reporting.",
   "author": {
     "name": "StackRail",

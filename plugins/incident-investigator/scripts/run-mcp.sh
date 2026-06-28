@@ -3,7 +3,7 @@
 # Tries, in order: PATH binary, Docker image, then prints install instructions.
 set -euo pipefail
 
-IMAGE="${INCIDENT_INVESTIGATOR_IMAGE:-ghcr.io/stackrail-io/incident-investigator:0.1.0}"
+IMAGE="${INCIDENT_INVESTIGATOR_IMAGE:-ghcr.io/stackrail-io/incident-investigator:1.0.0}"
 INSTALL_URL="https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install.sh"
 
 if command -v incident-investigator >/dev/null 2>&1; then

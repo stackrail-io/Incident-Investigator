@@ -59,7 +59,7 @@ func (g *HeuristicReportGenerator) Generate(s *model.Session, sig Signals) model
 		Timeline:        s.Timeline,
 		Evidence:        s.Evidence,
 		Hypotheses:      s.Hypotheses,
-		Graph:           s.Graph.View(),
+		Graph:           s.Graph,
 		BlastRadius:     s.BlastRadius,
 		Contradictions:  s.Contradictions,
 		MissingEvidence: s.MissingEvidence,

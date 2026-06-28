@@ -21,4 +21,5 @@ type Hypothesis struct {
 	Rationale           string           `json:"rationale,omitempty"`
 	SupportingEvidence  []string         `json:"supporting_evidence"`
 	ConflictingEvidence []string         `json:"conflicting_evidence"`
+	ReasoningTrace      []ReasoningTrace `json:"reasoning_trace,omitempty"`
 }
