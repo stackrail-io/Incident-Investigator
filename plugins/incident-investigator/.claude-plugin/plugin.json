@@ -1,0 +1,13 @@
+{
+  "name": "incident-investigator",
+  "description": "Vendor-neutral incident investigation MCP engine. Guides AI agents through evidence collection, hypothesis generation, and postmortem reporting.",
+  "version": "0.1.0",
+  "author": {
+    "name": "StackRail",
+    "email": "hello@stackrail.io"
+  },
+  "homepage": "https://github.com/stackrail-io/Incident-Investigator",
+  "repository": "https://github.com/stackrail-io/Incident-Investigator",
+  "license": "MIT",
+  "keywords": ["incident", "investigation", "mcp", "sre", "postmortem", "observability"]
+}

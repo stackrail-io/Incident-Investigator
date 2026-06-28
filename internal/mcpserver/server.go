@@ -8,10 +8,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stackrail/incident-investigator/internal/model"
 	"github.com/stackrail/incident-investigator/internal/runtime"
+	"github.com/stackrail/incident-investigator/internal/version"
 )
-
-// Version is the advertised server version.
-const Version = "0.1.0"
 
 // Server adapts the investigation runtime to the MCP protocol.
 type Server struct {
@@ -28,7 +26,7 @@ func New(rt *runtime.Runtime, log *slog.Logger) *Server {
 	s := &Server{rt: rt, log: log}
 	s.mcp = mcp.NewServer(&mcp.Implementation{
 		Name:    "incident-investigator",
-		Version: Version,
+		Version: version.Version,
 	}, nil)
 	s.registerTools()
 	return s
@@ -39,7 +37,7 @@ func (s *Server) MCP() *mcp.Server { return s.mcp }
 
 // Run serves the MCP protocol over stdio until the context is cancelled.
 func (s *Server) Run(ctx context.Context) error {
-	s.log.Info("incident-investigator MCP server starting", "version", Version)
+	s.log.Info("incident-investigator MCP server starting", "version", version.Version)
 	return s.mcp.Run(ctx, &mcp.StdioTransport{})
 }
 

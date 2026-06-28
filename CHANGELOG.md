@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Nothing yet.
+- Install scripts for macOS, Linux, and Windows (`scripts/install.sh`, `scripts/install.ps1`).
+- Docker install helper (`scripts/install-docker.sh`).
+- GoReleaser configuration and GitHub Actions release workflow for multi-platform binaries.
+- `incident-investigator version` command and centralized build metadata (`internal/version`).
+- CI workflow for tests on push and pull requests.
+- Claude Code plugin (`.claude-plugin/marketplace.json`, investigation skill, MCP config).
+- Codex plugin (`.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`).
+- Plugin bundle at `plugins/incident-investigator/` with MCP launcher script.
 
 ## [0.1.0] - 2026-06-28
 
@@ -33,5 +40,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - End-to-end MCP protocol test over an in-memory transport.
 - Docker image and `docker-compose` for running the MCP server.
 
-[Unreleased]: https://github.com/stackrail/incident-investigator/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/stackrail/incident-investigator/releases/tag/v0.1.0
+[Unreleased]: https://github.com/stackrail-io/Incident-Investigator/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/stackrail-io/Incident-Investigator/releases/tag/v0.1.0

@@ -1,12 +1,12 @@
 <p align="center">
-  <a href="https://github.com/stackrail/incident-investigator">
+  <a href="https://github.com/stackrail-io/Incident-Investigator">
     <img src="docs/banner.svg" alt="Incident Investigator — vendor-neutral MCP investigation engine" width="900"/>
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/stackrail/incident-investigator/stargazers"><img src="https://img.shields.io/github/stars/stackrail/incident-investigator?style=for-the-badge&logo=github&label=Stars&color=181717" alt="Stars"/></a>
-  <a href="https://github.com/stackrail/incident-investigator/releases"><img src="https://img.shields.io/badge/version-0.1.0-0ea5e9?style=for-the-badge" alt="Version"/></a>
+  <a href="https://github.com/stackrail-io/Incident-Investigator/stargazers"><img src="https://img.shields.io/github/stars/stackrail-io/Incident-Investigator?style=for-the-badge&logo=github&label=Stars&color=181717" alt="Stars"/></a>
+  <a href="https://github.com/stackrail-io/Incident-Investigator/releases"><img src="https://img.shields.io/github/v/release/stackrail-io/Incident-Investigator?style=for-the-badge&label=Version&color=0ea5e9" alt="Version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License"/></a>
   <a href="https://calendly.com/stackrail/production-audit"><img src="https://img.shields.io/badge/Book%20a%20Demo-StackRail-f97316?style=for-the-badge" alt="Book a Demo"/></a>
 </p>
@@ -145,35 +145,167 @@ start_investigation
 Everything is **incremental** and held **in memory** for one investigation —
 nothing is recomputed from a database and there is no persistence layer (yet).
 
-## Build & run
+## Install
 
-Requires Go 1.25+.
+Pre-built binaries are published on [GitHub Releases](https://github.com/stackrail-io/Incident-Investigator/releases).
+Push a `v*` tag (e.g. `v0.1.0`) to trigger the release workflow and publish installers.
+
+### macOS / Linux
 
 ```bash
-# Build
-go build -o bin/incident-investigator ./cmd/incident-investigator
-
-# Run the MCP server (speaks MCP over stdio; logs go to stderr)
-./bin/incident-investigator
+curl -fsSL https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install.sh | bash
 ```
 
-### Use it from an MCP client
+Install to a custom directory:
 
-The server communicates over **stdio**. Point any MCP client at the binary.
+```bash
+INSTALL_DIR="$HOME/.local/bin" curl -fsSL .../install.sh | bash
+```
 
-Claude Code / Cursor style `mcp.json`:
+Install a specific version:
+
+```bash
+INCIDENT_INVESTIGATOR_VERSION=0.1.0 curl -fsSL .../install.sh | bash
+```
+
+Verify:
+
+```bash
+incident-investigator version
+```
+
+### Windows
+
+```powershell
+irm https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install.ps1 | iex
+```
+
+Specific version:
+
+```powershell
+$env:INCIDENT_INVESTIGATOR_VERSION = "0.1.0"
+irm https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install.ps1 | iex
+```
+
+### Docker
+
+Pull and run (stdio MCP server):
+
+```bash
+docker pull ghcr.io/stackrail-io/incident-investigator:0.1.0
+docker run -i --rm ghcr.io/stackrail-io/incident-investigator:0.1.0
+```
+
+Or use the install helper (pulls the image and prints MCP config):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/stackrail-io/Incident-Investigator/main/scripts/install-docker.sh | bash
+```
+
+Build locally:
+
+```bash
+docker build -t stackrail/incident-investigator:0.1.0 .
+docker run -i --rm stackrail/incident-investigator:0.1.0
+
+# Or with compose
+docker compose up --build
+```
+
+### Claude Code plugin
+
+Install from this repository's marketplace (includes MCP server + investigation skill):
+
+```text
+/plugin marketplace add stackrail-io/Incident-Investigator
+/plugin install incident-investigator@incident-investigator
+/reload-plugins
+```
+
+Use the bundled skill:
+
+```text
+/incident-investigator:incident-investigation
+```
+
+Validate locally before submitting to the [Claude community marketplace](https://platform.claude.com/plugins/submit):
+
+```bash
+claude plugin validate plugins/incident-investigator
+```
+
+See [plugins/incident-investigator/README.md](plugins/incident-investigator/README.md) for details.
+
+### Codex plugin
+
+```bash
+codex plugin marketplace add stackrail-io/Incident-Investigator
+codex plugin install incident-investigator --source incident-investigator
+```
+
+Browse installed plugins in the Codex TUI with `/plugins`.
+
+The official Codex Plugin Directory does not accept third-party submissions yet; this Git-backed marketplace works today. See [OpenAI's plugin build guide](https://developers.openai.com/codex/plugins/build).
+
+### MCP client configuration
+
+After installing, point your MCP client at the binary or container:
+
+**Native (macOS / Linux)**
 
 ```json
 {
   "mcpServers": {
     "incident-investigator": {
-      "command": "/absolute/path/to/bin/incident-investigator"
+      "command": "incident-investigator"
     }
   }
 }
 ```
 
-Or with `go run`:
+**Windows**
+
+```json
+{
+  "mcpServers": {
+    "incident-investigator": {
+      "command": "C:/Users/you/AppData/Local/Programs/incident-investigator/incident-investigator.exe"
+    }
+  }
+}
+```
+
+**Docker**
+
+```json
+{
+  "mcpServers": {
+    "incident-investigator": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/stackrail-io/incident-investigator:0.1.0"]
+    }
+  }
+}
+```
+
+> stdout is reserved for the MCP protocol, so all logging is written to stderr.
+
+### Manual install
+
+Download the archive for your platform from [Releases](https://github.com/stackrail-io/Incident-Investigator/releases), extract `incident-investigator` (or `incident-investigator.exe`), and place it on your `PATH`.
+
+### Build from source
+
+Requires Go 1.25+.
+
+```bash
+git clone https://github.com/stackrail-io/Incident-Investigator.git
+cd Incident-Investigator
+go build -o bin/incident-investigator ./cmd/incident-investigator
+./bin/incident-investigator
+```
+
+Or with `go run` (no install):
 
 ```json
 {
@@ -186,35 +318,18 @@ Or with `go run`:
 }
 ```
 
-> stdout is reserved for the MCP protocol, so all logging is written to stderr.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
-### Docker
+## Build & run (developers)
 
 ```bash
-# Build image
-docker build -t stackrail/incident-investigator:0.1.0 .
-
-# Run (stdio MCP server)
-docker run -i --rm stackrail/incident-investigator:0.1.0
-
-# Or with compose
-docker compose up --build
+go test ./...
+go build -o bin/incident-investigator ./cmd/incident-investigator
+./bin/incident-investigator version
+./bin/incident-investigator
 ```
 
-Point your MCP client at the container (example for Cursor / Claude Code):
-
-```json
-{
-  "mcpServers": {
-    "incident-investigator": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "stackrail/incident-investigator:0.1.0"]
-    }
-  }
-}
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+Releases are built with [GoReleaser](https://goreleaser.com/) when a `v*` tag is pushed (see `.github/workflows/release.yml`).
 
 ## How the reasoning works
 
@@ -240,12 +355,15 @@ on the abstract signals extracted from evidence (`internal/engine/signals.go`):
 ## Project layout
 
 ```
-cmd/incident-investigator/   MCP server entrypoint (stdio)
-internal/model/              Vendor-neutral domain types (evidence, graph, …)
-internal/engine/             Planner, hypotheses, confidence, contradictions, …
-internal/runtime/            Stateful runtime + in-memory store
-internal/mcpserver/          MCP tool definitions and DTOs
-internal/fixtures/           Realistic incident scenarios used by tests
+cmd/incident-investigator/        MCP server entrypoint (stdio)
+plugins/incident-investigator/    Claude Code + Codex plugin bundle
+.claude-plugin/marketplace.json   Claude marketplace catalog
+.agents/plugins/marketplace.json  Codex marketplace catalog
+internal/model/                   Vendor-neutral domain types (evidence, graph, …)
+internal/engine/                  Planner, hypotheses, confidence, contradictions, …
+internal/runtime/                 Stateful runtime + in-memory store
+internal/mcpserver/               MCP tool definitions and DTOs
+internal/fixtures/                Realistic incident scenarios used by tests
 ```
 
 ## Testing
@@ -277,10 +395,12 @@ Connectors, authentication, RBAC, a UI, and streaming telemetry are explicitly
 
 | Resource | Link |
 | -------- | ---- |
+| Plugin bundle | [plugins/incident-investigator/README.md](plugins/incident-investigator/README.md) |
+| Claude marketplace submit | [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit) |
 | Changelog | [CHANGELOG.md](CHANGELOG.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Code of conduct | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
-| Bug reports | [Open a bug report](https://github.com/stackrail/incident-investigator/issues/new?template=bug_report.yml) |
+| Bug reports | [Open a bug report](https://github.com/stackrail-io/Incident-Investigator/issues/new?template=bug_report.yml) |
 | Security | [SECURITY.md](SECURITY.md) |
 
 ## License

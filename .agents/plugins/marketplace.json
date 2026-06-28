@@ -1,0 +1,22 @@
+{
+  "name": "incident-investigator",
+  "interface": {
+    "displayName": "Incident Investigator"
+  },
+  "plugins": [
+    {
+      "name": "incident-investigator",
+      "displayName": "Incident Investigator",
+      "source": {
+        "source": "local",
+        "path": "./plugins/incident-investigator"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Developer Tools",
+      "description": "Vendor-neutral incident investigation MCP engine. The AI assistant gathers evidence; the engine reasons over it.",
+      "icon": "./plugins/incident-investigator/assets/icon.svg"
+    }
+  ]
+}

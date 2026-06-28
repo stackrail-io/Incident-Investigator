@@ -1,0 +1,24 @@
+{
+  "name": "incident-investigator",
+  "owner": {
+    "name": "StackRail",
+    "email": "hello@stackrail.io"
+  },
+  "metadata": {
+    "description": "Vendor-neutral incident investigation MCP engine and skills for Claude Code.",
+    "homepage": "https://github.com/stackrail-io/Incident-Investigator"
+  },
+  "plugins": [
+    {
+      "name": "incident-investigator",
+      "source": "./plugins/incident-investigator",
+      "description": "Stateful MCP investigation runtime: evidence graph, competing hypotheses, timeline, and postmortem generation.",
+      "version": "0.1.0",
+      "author": {
+        "name": "StackRail"
+      },
+      "category": "developer-tools",
+      "tags": ["incident", "investigation", "mcp", "sre", "postmortem"]
+    }
+  ]
+}

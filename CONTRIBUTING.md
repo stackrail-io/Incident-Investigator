@@ -20,7 +20,7 @@ Include:
 
 - What you expected vs. what happened
 - Steps to reproduce (MCP tool calls, evidence payloads, session id if relevant)
-- Version (`incident-investigator` logs `version` on startup, or see badge in README)
+- Version (`incident-investigator version`, or see badge in README)
 - Go version and how you run the server (binary, `go run`, Docker)
 - Relevant logs from **stderr** (stdout is reserved for MCP)
 
@@ -86,6 +86,17 @@ New reasoning logic should:
 MCP tool schemas are inferred from Go types. If you change DTOs in
 `internal/mcpserver/`, update the end-to-end test in
 `internal/mcpserver/server_test.go`.
+
+### Plugin changes
+
+Claude Code and Codex plugin files live under `plugins/incident-investigator/`.
+Validate before submitting to the Claude community marketplace:
+
+```bash
+claude plugin validate plugins/incident-investigator
+```
+
+See [plugins/incident-investigator/README.md](plugins/incident-investigator/README.md).
 
 ## Pull request checklist
 

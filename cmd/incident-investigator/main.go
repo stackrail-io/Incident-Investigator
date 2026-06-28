@@ -8,6 +8,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -16,9 +17,39 @@ import (
 
 	"github.com/stackrail/incident-investigator/internal/mcpserver"
 	"github.com/stackrail/incident-investigator/internal/runtime"
+	"github.com/stackrail/incident-investigator/internal/version"
 )
 
 func main() {
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "version", "-version", "--version":
+			fmt.Println(version.Full())
+			return
+		case "help", "-h", "--help":
+			printHelp()
+			return
+		}
+	}
+
+	runServer()
+}
+
+func printHelp() {
+	fmt.Fprintf(os.Stderr, `Incident Investigator — vendor-neutral MCP investigation engine
+
+Usage:
+  incident-investigator              Run the MCP server (stdio)
+  incident-investigator version      Print version and exit
+  incident-investigator help         Show this help
+
+Install:
+  https://github.com/stackrail-io/Incident-Investigator#install
+
+`)
+}
+
+func runServer() {
 	// IMPORTANT: stdout is reserved for the MCP protocol over stdio, so all logs
 	// go to stderr.
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{

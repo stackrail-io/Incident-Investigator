@@ -1,0 +1,31 @@
+{
+  "name": "incident-investigator",
+  "version": "0.1.0",
+  "description": "Vendor-neutral incident investigation MCP engine. Guides AI agents through evidence collection, hypothesis generation, and postmortem reporting.",
+  "author": {
+    "name": "StackRail",
+    "email": "hello@stackrail.io",
+    "url": "https://stackrail.io"
+  },
+  "homepage": "https://github.com/stackrail-io/Incident-Investigator",
+  "repository": "https://github.com/stackrail-io/Incident-Investigator",
+  "license": "MIT",
+  "keywords": ["incident", "investigation", "mcp", "sre", "postmortem", "observability"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Incident Investigator",
+    "shortDescription": "Vendor-neutral incident investigation engine",
+    "longDescription": "Stateful MCP investigation runtime that requests evidence, builds an evidence graph, generates competing hypotheses, and produces postmortem reports. The AI assistant gathers evidence; the engine reasons over it.",
+    "developerName": "StackRail",
+    "category": "Developer Tools",
+    "websiteURL": "https://github.com/stackrail-io/Incident-Investigator",
+    "defaultPrompt": [
+      "Use Incident Investigator to start an investigation into why checkout failed yesterday.",
+      "Submit deployment, log, and metric evidence to the active investigation session.",
+      "Finish the investigation and summarize root cause candidates and recommendations."
+    ],
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/icon.svg"
+  }
+}
