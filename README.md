@@ -8,7 +8,7 @@
   <a href="https://github.com/stackrail/incident-investigator/stargazers"><img src="https://img.shields.io/github/stars/stackrail/incident-investigator?style=for-the-badge&logo=github&label=Stars&color=181717" alt="Stars"/></a>
   <a href="https://github.com/stackrail/incident-investigator/releases"><img src="https://img.shields.io/badge/version-0.1.0-0ea5e9?style=for-the-badge" alt="Version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License"/></a>
-  <a href="https://stackrail.io/demo"><img src="https://img.shields.io/badge/Book%20a%20Demo-StackRail-f97316?style=for-the-badge" alt="Book a Demo"/></a>
+  <a href="https://calendly.com/stackrail/production-audit"><img src="https://img.shields.io/badge/Book%20a%20Demo-StackRail-f97316?style=for-the-badge" alt="Book a Demo"/></a>
 </p>
 
 # Incident Investigator

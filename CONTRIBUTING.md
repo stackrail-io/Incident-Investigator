@@ -104,4 +104,4 @@ participating, you agree to uphold it.
 
 - [GitHub Discussions](https://github.com/stackrail/incident-investigator/discussions) (if enabled)
 - [Discord community](https://discord.gg/stackrail)
-- [Book a demo](https://stackrail.io/demo) for StackRail product questions
+- [Book a demo](https://calendly.com/stackrail/production-audit) for StackRail product questions
