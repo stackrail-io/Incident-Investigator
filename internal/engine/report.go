@@ -75,12 +75,15 @@ func (g *HeuristicReportGenerator) Generate(s *model.Session, sig Signals) model
 }
 
 func topCandidates(hs []model.Hypothesis, n int) []model.Hypothesis {
-	out := []model.Hypothesis{}
-	for i, h := range hs {
-		if i >= n || h.Status == model.StatusRefuted {
-			break
+	out := make([]model.Hypothesis, 0, n)
+	for _, h := range hs {
+		if h.Status == model.StatusRefuted {
+			continue
 		}
 		out = append(out, h)
+		if len(out) >= n {
+			break
+		}
 	}
 	return out
 }

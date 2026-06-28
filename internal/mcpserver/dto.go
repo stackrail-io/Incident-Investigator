@@ -2,6 +2,7 @@ package mcpserver
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/stackrail/incident-investigator/internal/model"
@@ -83,6 +84,16 @@ type StatusOutput struct {
 // toModelEvidence converts an MCP evidence input into the internal model,
 // parsing timestamps leniently. Validation of category happens in the runtime.
 func (e EvidenceInput) toModelEvidence() (*model.Evidence, error) {
+	if strings.TrimSpace(e.Summary) == "" {
+		return nil, fmt.Errorf("evidence summary is required")
+	}
+	if strings.TrimSpace(e.Category) == "" {
+		return nil, fmt.Errorf("evidence category is required")
+	}
+	cat := model.Category(e.Category)
+	if !cat.Valid() {
+		return nil, fmt.Errorf("unknown evidence category %q", e.Category)
+	}
 	ts, err := parseFlexibleTime(e.Timestamp)
 	if err != nil {
 		return nil, fmt.Errorf("evidence %q: %w", e.Summary, err)
@@ -90,10 +101,10 @@ func (e EvidenceInput) toModelEvidence() (*model.Evidence, error) {
 	return &model.Evidence{
 		ID:        e.ID,
 		Timestamp: ts,
-		Category:  model.Category(e.Category),
+		Category:  cat,
 		Source:    e.Source,
 		Entity:    e.Entity,
-		Summary:   e.Summary,
+		Summary:   strings.TrimSpace(e.Summary),
 		Payload:   e.Payload,
 	}, nil
 }

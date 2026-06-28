@@ -1,6 +1,6 @@
 {
   "incident-investigator": {
     "command": "bash",
-    "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/run-mcp.sh"]
+    "args": ["./scripts/run-mcp.sh"]
   }
 }

@@ -21,6 +21,13 @@ $Binary = "incident-investigator"
 $Version = if ($env:INCIDENT_INVESTIGATOR_VERSION) { $env:INCIDENT_INVESTIGATOR_VERSION } else { "latest" }
 $InstallRoot = if ($env:INSTALL_DIR) { $env:INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\incident-investigator" }
 
+function Resolve-Arch {
+    if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
+        return "arm64"
+    }
+    return "amd64"
+}
+
 function Resolve-Version {
     param([string]$Requested)
     if ($Requested -ne "latest") {
@@ -38,13 +45,14 @@ function Ensure-Directory {
 }
 
 $Version = Resolve-Version -Requested $Version
-$Archive = "${Binary}_${Version}_windows_amd64.zip"
+$Arch = Resolve-Arch
+$Archive = "${Binary}_${Version}_windows_${Arch}.zip"
 $Url = "https://github.com/$Repo/releases/download/v${Version}/$Archive"
 $TempDir = Join-Path $env:TEMP ("ii-install-" + [guid]::NewGuid().ToString("n"))
 $ZipPath = Join-Path $TempDir $Archive
 
 try {
-    Write-Host "Installing $Binary v$Version for windows/amd64..."
+    Write-Host "Installing $Binary v$Version for windows/$Arch..."
     Write-Host "Downloading $Url"
     Ensure-Directory -Path $TempDir
     Invoke-WebRequest -Uri $Url -OutFile $ZipPath -UseBasicParsing

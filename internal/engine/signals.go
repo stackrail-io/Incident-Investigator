@@ -12,7 +12,8 @@ import (
 // scans every piece of evidence (summary + stringified payload) for these.
 var signalKeywords = map[string][]string{
 	"deployment": {"deploy", "deployment", "release", "rollout", "ship", "canary"},
-	"rollback":   {"rollback", "rolled back", "reverted", "recovered", "restored", "resolved", "back to normal"},
+	"rollback":   {"rollback", "rolled back", "reverted", "roll back"},
+	"recovery":   {"back to normal", "service recovered", "incident resolved", "fully restored"},
 	"database":   {"database", "postgres", "mysql", "sql", "connection pool", "db connection", "query timeout", "deadlock", "replica", "saturat"},
 	"config":     {"config", "configuration", "env var", "environment variable", "feature flag", "secret", "parameter"},
 	"dns":        {"dns", "name resolution", "nxdomain", "resolve host", "could not resolve"},
@@ -93,6 +94,9 @@ func looksLikeSymptom(e *model.Evidence, text string) bool {
 		return true
 	case model.CategoryApplicationLogs, model.CategoryMetrics, model.CategoryTraceEvents:
 		return matchesAny(text, signalKeywords["error"]) || matchesAny(text, signalKeywords["latency"])
+	case model.CategoryDeploymentEvents, model.CategoryConfigurationChanges:
+		// Deployments and config changes are potential causes, not symptoms.
+		return false
 	default:
 		return matchesAny(text, signalKeywords["error"])
 	}
@@ -116,8 +120,8 @@ func Analyze(s *model.Session) Signals {
 			}
 		}
 
-		isDeploy := e.Category == model.CategoryDeploymentEvents || matchesAny(text, signalKeywords["deployment"])
-		isRecovery := matchesAny(text, signalKeywords["rollback"])
+		isRecovery := matchesAny(text, signalKeywords["rollback"]) || matchesAny(text, signalKeywords["recovery"])
+		isDeploy := !isRecovery && (e.Category == model.CategoryDeploymentEvents || matchesAny(text, signalKeywords["deployment"]))
 
 		if isDeploy && sig.FirstDeployment == nil {
 			sig.FirstDeployment = e

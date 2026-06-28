@@ -8,13 +8,13 @@ and engine improvements that stay true to that philosophy.
 
 - Read the [README](README.md) and understand the core rule: **no infrastructure
   connectors**. The engine reasons over evidence; the AI assistant gathers it.
-- Check [open issues](https://github.com/stackrail/incident-investigator/issues)
-  and [pull requests](https://github.com/stackrail/incident-investigator/pulls)
+- Check [open issues](https://github.com/stackrail-io/Incident-Investigator/issues)
+  and [pull requests](https://github.com/stackrail-io/Incident-Investigator/pulls)
   to avoid duplicate work.
 
 ## How to report bugs
 
-Use the [Bug report issue template](https://github.com/stackrail/incident-investigator/issues/new?template=bug_report.yml).
+Use the [Bug report issue template](https://github.com/stackrail-io/Incident-Investigator/issues/new?template=bug_report.yml).
 
 Include:
 
@@ -38,8 +38,8 @@ See [SECURITY.md](SECURITY.md) for our responsible disclosure process.
 Requirements: **Go 1.25+**
 
 ```bash
-git clone https://github.com/stackrail/incident-investigator.git
-cd incident-investigator
+git clone https://github.com/stackrail-io/Incident-Investigator.git
+cd Incident-Investigator
 go test ./...
 go build -o bin/incident-investigator ./cmd/incident-investigator
 ```
@@ -113,6 +113,6 @@ participating, you agree to uphold it.
 
 ## Questions
 
-- [GitHub Discussions](https://github.com/stackrail/incident-investigator/discussions) (if enabled)
+- [GitHub Discussions](https://github.com/stackrail-io/Incident-Investigator/discussions) (if enabled)
 - [Discord community](https://discord.gg/stackrail)
 - [Book a demo](https://calendly.com/stackrail/production-audit) for StackRail product questions

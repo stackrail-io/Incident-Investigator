@@ -14,7 +14,7 @@ If you believe you have found a security issue in Incident Investigator, report 
 responsibly using one of these channels:
 
 1. **GitHub private security advisories** (preferred)  
-   [Create a private security advisory](https://github.com/stackrail/incident-investigator/security/advisories/new)
+   [Create a private security advisory](https://github.com/stackrail-io/Incident-Investigator/security/advisories/new)
 
 2. **Email**  
    Send details to **security@stackrail.io** with the subject line  
@@ -59,5 +59,5 @@ isolation. Treat submitted evidence as sensitive operational data.
 ## Bug reports vs. security reports
 
 - **Bugs** (incorrect hypotheses, planner behavior, crashes with benign input): use the
-  [bug report template](https://github.com/stackrail/incident-investigator/issues/new?template=bug_report.yml)
+  [bug report template](https://github.com/stackrail-io/Incident-Investigator/issues/new?template=bug_report.yml)
 - **Security issues**: use this policy only

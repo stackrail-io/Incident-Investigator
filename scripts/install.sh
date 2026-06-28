@@ -44,9 +44,8 @@ resolve_version() {
   if [ "$VERSION" = "latest" ]; then
     need_cmd curl
     VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-      | grep '"tag_name":' \
-      | head -1 \
-      | sed -E 's/.*"v([^"]+)".*/\1/')"
+      | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"v\?\([^"]*\)".*/\1/p' \
+      | head -1)"
     [ -n "$VERSION" ] || err "could not resolve latest release version"
   fi
   # Strip leading v if provided.

@@ -1,7 +1,9 @@
 package runtime
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/stackrail/incident-investigator/internal/engine"
@@ -94,6 +96,13 @@ type StartInput struct {
 
 // Start creates a new investigation session and runs the planner once.
 func (r *Runtime) Start(in StartInput) (*model.Session, error) {
+	if strings.TrimSpace(in.Question) == "" {
+		return nil, fmt.Errorf("question is required")
+	}
+	if err := validateTimeWindow(in.TimeWindow); err != nil {
+		return nil, err
+	}
+
 	now := r.now()
 	s := &model.Session{
 		ID:         newID("inv"),
@@ -120,52 +129,87 @@ func (r *Runtime) Start(in StartInput) (*model.Session, error) {
 
 // Submit ingests new evidence into a session and recomputes derived state.
 func (r *Runtime) Submit(sessionID string, evidence []*model.Evidence) (*model.Session, error) {
-	s, err := r.store.Get(sessionID)
-	if err != nil {
-		return nil, err
+	if len(evidence) == 0 {
+		return nil, ErrEmptyEvidence
 	}
 
 	now := r.now()
-	for _, e := range evidence {
-		r.normalizeEvidence(e, now)
-		s.Evidence = append(s.Evidence, e)
-	}
-	s.AddHistory("evidence_submitted", pluralizeCount(len(evidence), "evidence item"), now)
+	return r.store.WithSession(sessionID, func(s *model.Session) error {
+		if s.Status == model.StatusCompleted {
+			return ErrSessionCompleted
+		}
 
-	r.recompute(s)
-	s.UpdatedAt = now
+		seen := existingEvidenceIDs(s)
+		for _, e := range evidence {
+			if e == nil {
+				return ErrInvalidEvidence
+			}
+			r.normalizeEvidence(e, now)
+			if strings.TrimSpace(e.Summary) == "" {
+				return ErrInvalidEvidence
+			}
+			if seen[e.ID] {
+				return fmt.Errorf("%w: %s", ErrDuplicateEvidenceID, e.ID)
+			}
+			seen[e.ID] = true
+			s.Evidence = append(s.Evidence, e)
+		}
 
-	if err := r.store.Save(s); err != nil {
-		return nil, err
-	}
-	return s, nil
+		s.AddHistory("evidence_submitted", pluralizeCount(len(evidence), "evidence item"), now)
+		r.recompute(s)
+		s.UpdatedAt = now
+		return nil
+	})
 }
 
-// Get returns the current session state.
+// Get returns the current session state, recomputing derived fields first.
 func (r *Runtime) Get(sessionID string) (*model.Session, error) {
-	return r.store.Get(sessionID)
+	return r.store.WithSession(sessionID, func(s *model.Session) error {
+		r.recompute(s)
+		return nil
+	})
 }
 
 // Finish generates the final report and marks the session completed.
 func (r *Runtime) Finish(sessionID string) (model.Report, *model.Session, error) {
-	s, err := r.store.Get(sessionID)
+	var report model.Report
+	sess, err := r.store.WithSession(sessionID, func(s *model.Session) error {
+		r.recompute(s)
+		sig := engine.Analyze(s)
+		report = r.engines.Report.Generate(s, sig)
+
+		if s.Status != model.StatusCompleted {
+			now := r.now()
+			s.Status = model.StatusCompleted
+			s.UpdatedAt = now
+			s.AddHistory("finished", "final report generated", now)
+		}
+		return nil
+	})
 	if err != nil {
 		return model.Report{}, nil, err
 	}
+	return report, sess, nil
+}
 
-	now := r.now()
-	r.recompute(s)
-	sig := engine.Analyze(s)
-	report := r.engines.Report.Generate(s, sig)
-
-	s.Status = model.StatusCompleted
-	s.UpdatedAt = now
-	s.AddHistory("finished", "final report generated", now)
-
-	if err := r.store.Save(s); err != nil {
-		return model.Report{}, nil, err
+func validateTimeWindow(w model.TimeWindow) error {
+	if w.Start.IsZero() || w.End.IsZero() {
+		return nil
 	}
-	return report, s, nil
+	if w.End.Before(w.Start) {
+		return ErrInvalidTimeWindow
+	}
+	return nil
+}
+
+func existingEvidenceIDs(s *model.Session) map[string]bool {
+	seen := make(map[string]bool, len(s.Evidence))
+	for _, e := range s.Evidence {
+		if e != nil {
+			seen[e.ID] = true
+		}
+	}
+	return seen
 }
 
 // normalizeEvidence fills in defaults the client may have omitted.

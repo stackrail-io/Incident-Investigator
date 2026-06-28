@@ -310,9 +310,8 @@ func nonNil(in []string) []string {
 	if in == nil {
 		return []string{}
 	}
-	// de-duplicate while preserving order
 	seen := map[string]bool{}
-	out := in[:0]
+	out := make([]string, 0, len(in))
 	for _, v := range in {
 		if !seen[v] {
 			seen[v] = true

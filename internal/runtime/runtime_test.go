@@ -1,6 +1,7 @@
 package runtime_test
 
 import (
+	"errors"
 	"math"
 	"strconv"
 	"testing"
@@ -194,6 +195,58 @@ func TestUnknownSessionErrors(t *testing.T) {
 	}
 	if _, err := rt.Submit("does-not-exist", nil); err == nil {
 		t.Errorf("expected error for submit to unknown session")
+	}
+}
+
+func TestSubmitAfterFinishRejected(t *testing.T) {
+	rt := newRuntime()
+	sess, err := rt.Start(runtime.StartInput{Question: "Why did api fail?", Service: "api"})
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	ev := []*model.Evidence{
+		{ID: "e1", Timestamp: time.Now(), Category: model.CategoryApplicationLogs, Summary: "HTTP 500 errors"},
+	}
+	if _, err := rt.Submit(sess.ID, ev); err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	if _, _, err := rt.Finish(sess.ID); err != nil {
+		t.Fatalf("Finish: %v", err)
+	}
+	_, err = rt.Submit(sess.ID, ev)
+	if !errors.Is(err, runtime.ErrSessionCompleted) {
+		t.Errorf("Submit after finish = %v, want ErrSessionCompleted", err)
+	}
+}
+
+func TestInvalidTimeWindowRejected(t *testing.T) {
+	rt := newRuntime()
+	start := time.Date(2026, 6, 27, 10, 0, 0, 0, time.UTC)
+	end := start.Add(-time.Hour)
+	_, err := rt.Start(runtime.StartInput{
+		Question:   "Why?",
+		TimeWindow: model.TimeWindow{Start: start, End: end},
+	})
+	if !errors.Is(err, runtime.ErrInvalidTimeWindow) {
+		t.Errorf("Start with inverted window = %v, want ErrInvalidTimeWindow", err)
+	}
+}
+
+func TestDuplicateEvidenceIDRejected(t *testing.T) {
+	rt := newRuntime()
+	sess, err := rt.Start(runtime.StartInput{Question: "Why?", Service: "api"})
+	if err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	ev := []*model.Evidence{
+		{ID: "dup", Timestamp: time.Now(), Category: model.CategoryApplicationLogs, Summary: "error spike"},
+	}
+	if _, err := rt.Submit(sess.ID, ev); err != nil {
+		t.Fatalf("first Submit: %v", err)
+	}
+	_, err = rt.Submit(sess.ID, ev)
+	if !errors.Is(err, runtime.ErrDuplicateEvidenceID) {
+		t.Errorf("duplicate submit = %v, want ErrDuplicateEvidenceID", err)
 	}
 }
 

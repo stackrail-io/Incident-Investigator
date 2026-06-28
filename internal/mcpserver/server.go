@@ -2,8 +2,8 @@ package mcpserver
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stackrail/incident-investigator/internal/model"
@@ -67,25 +67,29 @@ func (s *Server) registerTools() {
 }
 
 func (s *Server) handleStart(ctx context.Context, _ *mcp.CallToolRequest, in StartInput) (*mcp.CallToolResult, StartOutput, error) {
-	if in.Question == "" {
-		return nil, StartOutput{}, fmt.Errorf("question is required")
+	if strings.TrimSpace(in.Question) == "" {
+		return nil, StartOutput{}, toolErr("question is required")
 	}
 	start, err := parseFlexibleTime(in.TimeWindow.Start)
 	if err != nil {
-		return nil, StartOutput{}, err
+		return nil, StartOutput{}, toolErr("%s", err.Error())
 	}
 	end, err := parseFlexibleTime(in.TimeWindow.End)
 	if err != nil {
-		return nil, StartOutput{}, err
+		return nil, StartOutput{}, toolErr("%s", err.Error())
+	}
+	tw := model.TimeWindow{Start: start, End: end}
+	if !start.IsZero() && !end.IsZero() && end.Before(start) {
+		return nil, StartOutput{}, toolErr("time_window end must not be before start")
 	}
 
 	sess, err := s.rt.Start(runtime.StartInput{
 		Question:   in.Question,
 		Service:    in.Service,
-		TimeWindow: model.TimeWindow{Start: start, End: end},
+		TimeWindow: tw,
 	})
 	if err != nil {
-		return nil, StartOutput{}, err
+		return nil, StartOutput{}, mapRuntimeError(err)
 	}
 
 	s.log.Info("investigation started", "session_id", sess.ID, "question", in.Question)
@@ -102,24 +106,24 @@ func (s *Server) handleStart(ctx context.Context, _ *mcp.CallToolRequest, in Sta
 
 func (s *Server) handleSubmit(ctx context.Context, _ *mcp.CallToolRequest, in SubmitInput) (*mcp.CallToolResult, SubmitOutput, error) {
 	if in.SessionID == "" {
-		return nil, SubmitOutput{}, fmt.Errorf("session_id is required")
+		return nil, SubmitOutput{}, toolErr("session_id is required")
 	}
 	if len(in.Evidence) == 0 {
-		return nil, SubmitOutput{}, fmt.Errorf("at least one evidence item is required")
+		return nil, SubmitOutput{}, toolErr("at least one evidence item is required")
 	}
 
 	evidence := make([]*model.Evidence, 0, len(in.Evidence))
 	for _, e := range in.Evidence {
 		me, err := e.toModelEvidence()
 		if err != nil {
-			return nil, SubmitOutput{}, err
+			return nil, SubmitOutput{}, toolErr("%s", err.Error())
 		}
 		evidence = append(evidence, me)
 	}
 
 	sess, err := s.rt.Submit(in.SessionID, evidence)
 	if err != nil {
-		return nil, SubmitOutput{}, err
+		return nil, SubmitOutput{}, mapRuntimeError(err)
 	}
 
 	s.log.Info("evidence submitted",
@@ -142,11 +146,11 @@ func (s *Server) handleSubmit(ctx context.Context, _ *mcp.CallToolRequest, in Su
 
 func (s *Server) handleStatus(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, StatusOutput, error) {
 	if in.SessionID == "" {
-		return nil, StatusOutput{}, fmt.Errorf("session_id is required")
+		return nil, StatusOutput{}, toolErr("session_id is required")
 	}
 	sess, err := s.rt.Get(in.SessionID)
 	if err != nil {
-		return nil, StatusOutput{}, err
+		return nil, StatusOutput{}, mapRuntimeError(err)
 	}
 
 	return nil, StatusOutput{
@@ -167,11 +171,11 @@ func (s *Server) handleStatus(ctx context.Context, _ *mcp.CallToolRequest, in Se
 
 func (s *Server) handleFinish(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, model.Report, error) {
 	if in.SessionID == "" {
-		return nil, model.Report{}, fmt.Errorf("session_id is required")
+		return nil, model.Report{}, toolErr("session_id is required")
 	}
 	report, sess, err := s.rt.Finish(in.SessionID)
 	if err != nil {
-		return nil, model.Report{}, err
+		return nil, model.Report{}, mapRuntimeError(err)
 	}
 	s.log.Info("investigation finished", "session_id", sess.ID, "confidence", report.Confidence)
 	return nil, report, nil
