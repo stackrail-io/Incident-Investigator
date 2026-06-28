@@ -116,6 +116,40 @@ them. The Investigation Graph remains the canonical source of truth.
 > Reasoners do not investigate. Reasoners make observations. The runtime conducts
 > the investigation.
 
+## Investigation Specification v1
+
+Incident Investigator implements **[Investigation Specification v1](spec/investigation-v1/README.md)** —
+a vendor-neutral, transport-agnostic protocol for AI-assisted incident investigations
+(think **OpenAPI for investigations**).
+
+The spec defines:
+
+- **Information model** — Investigation, Question, Evidence, Hypothesis, Finding, …
+- **Canonical lifecycle** — single state machine (`started` → … → `completed`)
+- **Protocol operations** — Start, SubmitEvidence, Finish, … independent of MCP
+- **Extensions** — graph, multi-reasoner, incident intelligence
+
+MCP tools in this repo are one **binding** of the spec. Other projects can implement
+or consume the same protocol over REST, gRPC, or SDKs without sharing this codebase.
+
+```
+Investigation
+ ├── Questions
+ ├── Evidence
+ ├── Graph
+ ├── Hypotheses
+ └── Findings
+```
+
+Run portable conformance fixtures:
+
+```bash
+go test ./internal/spec/...
+```
+
+Fixtures live in [`conformance/fixtures/`](conformance/fixtures/) — transport-agnostic
+JSON scenarios any implementation can replay.
+
 ```
 Investigation Runtime
         │
@@ -141,11 +175,12 @@ Runtime Validation → Apply → Updated Investigation
 | **Causal** | 90 | Graph-native root cause, blast radius, strongest paths (graph only) |
 | **Hypothesis** | 80 | Competing hypotheses, confidence, coverage, strategy, graph rebuild |
 | **Consistency** | 70 | Contradictions, impossible sequences, graph integrity |
-| **Semantic** | 50 | LLM abstraction (interface + mock only — no vendor SDKs) |
+| **Semantic** | 50 | Host LLM via MCP sampling (Claude/Codex); skipped when client lacks sampling |
 
 Reasoners are classified by **what kind of reasoning they perform**, not how they
-are implemented. A `SemanticReasoner` may use an LLM today and a local model
-tomorrow without architectural changes.
+are implemented. The **Semantic** reasoner delegates to the MCP host (Claude, Codex)
+via [MCP sampling](https://modelcontextprotocol.io/specification/2025-11-25/client/sampling)
+when the client supports it — no vendor SDKs or API keys in the server.
 
 ### Reasoning actions
 
@@ -693,6 +728,8 @@ on the abstract signals extracted from evidence (`internal/engine/signals.go`):
 ## Project layout
 
 ```
+internal/spec/                     Spec v1 conformance tests (portable JSON fixtures)
+spec/investigation-v1/            Investigation Specification v1 (OpenAPI-style schemas)
 cmd/incident-investigator/        MCP server entrypoint (stdio)
 plugins/incident-investigator/    Claude Code + Codex plugin bundle
 .claude-plugin/marketplace.json   Claude marketplace catalog

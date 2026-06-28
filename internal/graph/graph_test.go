@@ -1,6 +1,7 @@
 package graph_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ func buildDeploymentGraph(t *testing.T) *graph.InvestigationGraph {
 	t.Helper()
 	rt := runtime.New()
 	fix := fixtures.BadDeployment()
-	sess, err := rt.Start(runtime.StartInput{
+	sess, err := rt.Start(context.Background(), runtime.StartInput{
 		Question:   fix.Question,
 		Service:    fix.Service,
 		TimeWindow: fix.Window,
@@ -24,11 +25,11 @@ func buildDeploymentGraph(t *testing.T) *graph.InvestigationGraph {
 		t.Fatal(err)
 	}
 	for _, batch := range fix.Batches {
-		if _, err := rt.Submit(sess.ID, batch); err != nil {
+		if _, err := rt.Submit(context.Background(), sess.ID, batch); err != nil {
 			t.Fatal(err)
 		}
 	}
-	sess, err = rt.Get(sess.ID)
+	sess, err = rt.Get(context.Background(), sess.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +184,7 @@ func TestExplainPath(t *testing.T) {
 func TestLargeInvestigationGraph(t *testing.T) {
 	rt := runtime.New()
 	for _, fix := range fixtures.All() {
-		sess, err := rt.Start(runtime.StartInput{
+		sess, err := rt.Start(context.Background(), runtime.StartInput{
 			Question:   fix.Question,
 			Service:    fix.Service,
 			TimeWindow: fix.Window,
@@ -192,11 +193,11 @@ func TestLargeInvestigationGraph(t *testing.T) {
 			t.Fatalf("%s start: %v", fix.Name, err)
 		}
 		for _, batch := range fix.Batches {
-			if _, err := rt.Submit(sess.ID, batch); err != nil {
+			if _, err := rt.Submit(context.Background(), sess.ID, batch); err != nil {
 				t.Fatalf("%s submit: %v", fix.Name, err)
 			}
 		}
-		sess, _ = rt.Get(sess.ID)
+		sess, _ = rt.Get(context.Background(), sess.ID)
 		if sess.Graph == nil || len(sess.Graph.Nodes) < 3 {
 			t.Errorf("%s: graph too small", fix.Name)
 		}

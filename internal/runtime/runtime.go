@@ -161,7 +161,7 @@ type ExplainOutput struct {
 }
 
 // Start creates a new investigation session and runs the planner once.
-func (r *Runtime) Start(in StartInput) (*model.Session, error) {
+func (r *Runtime) Start(ctx context.Context, in StartInput) (*model.Session, error) {
 	if strings.TrimSpace(in.Question) == "" {
 		return nil, fmt.Errorf("question is required")
 	}
@@ -196,7 +196,7 @@ func (r *Runtime) Start(in StartInput) (*model.Session, error) {
 	s.AddHistory("started", in.Question, now)
 	s.AddJournal("investigation_started", in.Question, 0, now)
 
-	r.recompute(s)
+	r.recompute(ctx, s)
 
 	if err := r.store.Create(s); err != nil {
 		return nil, err
@@ -205,7 +205,7 @@ func (r *Runtime) Start(in StartInput) (*model.Session, error) {
 }
 
 // Submit ingests new evidence into a session and recomputes derived state.
-func (r *Runtime) Submit(sessionID string, evidence []*model.Evidence) (*model.Session, error) {
+func (r *Runtime) Submit(ctx context.Context, sessionID string, evidence []*model.Evidence) (*model.Session, error) {
 	if len(evidence) == 0 {
 		return nil, ErrEmptyEvidence
 	}
@@ -234,23 +234,23 @@ func (r *Runtime) Submit(sessionID string, evidence []*model.Evidence) (*model.S
 
 		s.AddHistory("evidence_submitted", pluralizeCount(len(evidence), "evidence item"), now)
 		s.AddJournal("evidence_submitted", pluralizeCount(len(evidence), "item"), s.Confidence, now)
-		r.recompute(s)
+		r.recompute(ctx, s)
 		s.UpdatedAt = now
 		return nil
 	})
 }
 
 // Get returns the current session state, recomputing derived fields first.
-func (r *Runtime) Get(sessionID string) (*model.Session, error) {
+func (r *Runtime) Get(ctx context.Context, sessionID string) (*model.Session, error) {
 	return r.store.WithSession(sessionID, func(s *model.Session) error {
-		r.recompute(s)
+		r.recompute(ctx, s)
 		return nil
 	})
 }
 
 // Explain returns the full reasoning snapshot for an investigation.
-func (r *Runtime) Explain(sessionID string) (*ExplainOutput, error) {
-	sess, err := r.Get(sessionID)
+func (r *Runtime) Explain(ctx context.Context, sessionID string) (*ExplainOutput, error) {
+	sess, err := r.Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -275,8 +275,8 @@ func (r *Runtime) Explain(sessionID string) (*ExplainOutput, error) {
 }
 
 // ExplainInvestigation returns the protocol-centric investigation snapshot.
-func (r *Runtime) ExplainInvestigation(sessionID string) (*ExplainInvestigationOutput, error) {
-	sess, err := r.Get(sessionID)
+func (r *Runtime) ExplainInvestigation(ctx context.Context, sessionID string) (*ExplainInvestigationOutput, error) {
+	sess, err := r.Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -300,8 +300,8 @@ func (r *Runtime) ExplainInvestigation(sessionID string) (*ExplainInvestigationO
 }
 
 // GetPlan returns the investigation plan for a session.
-func (r *Runtime) GetPlan(sessionID string) (*model.InvestigationPlan, error) {
-	sess, err := r.Get(sessionID)
+func (r *Runtime) GetPlan(ctx context.Context, sessionID string) (*model.InvestigationPlan, error) {
+	sess, err := r.Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -309,8 +309,8 @@ func (r *Runtime) GetPlan(sessionID string) (*model.InvestigationPlan, error) {
 }
 
 // ListOpenQuestions returns unresolved questions sorted by priority.
-func (r *Runtime) ListOpenQuestions(sessionID string) ([]model.Question, error) {
-	sess, err := r.Get(sessionID)
+func (r *Runtime) ListOpenQuestions(ctx context.Context, sessionID string) ([]model.Question, error) {
+	sess, err := r.Get(ctx, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -318,7 +318,7 @@ func (r *Runtime) ListOpenQuestions(sessionID string) ([]model.Question, error) 
 }
 
 // ResolveQuestion explicitly resolves a protocol question.
-func (r *Runtime) ResolveQuestion(in ResolveQuestionInput) (*model.QuestionResolution, *model.Session, error) {
+func (r *Runtime) ResolveQuestion(ctx context.Context, in ResolveQuestionInput) (*model.QuestionResolution, *model.Session, error) {
 	var res *model.QuestionResolution
 	sess, err := r.store.WithSession(in.SessionID, func(s *model.Session) error {
 		if s.Status == model.StatusCompleted {
@@ -329,7 +329,7 @@ func (r *Runtime) ResolveQuestion(in ResolveQuestionInput) (*model.QuestionResol
 			return err
 		}
 		if s.Plan == nil {
-			r.recompute(s)
+			r.recompute(ctx, s)
 		}
 		now := r.now()
 		res, err = pe.ResolveQuestion(s, in.QuestionID, in.Confirmed, in.Reason, now)
@@ -363,10 +363,10 @@ func evidenceRequests(plan *model.InvestigationPlan) []model.ProtocolEvidenceReq
 }
 
 // Finish generates the final report and marks the session completed.
-func (r *Runtime) Finish(sessionID string) (model.Report, *model.Session, error) {
+func (r *Runtime) Finish(ctx context.Context, sessionID string) (model.Report, *model.Session, error) {
 	var report model.Report
 	sess, err := r.store.WithSession(sessionID, func(s *model.Session) error {
-		r.recompute(s)
+		r.recompute(ctx, s)
 		sig := engine.Analyze(s)
 		report = r.engines.Report.Generate(s, sig)
 
@@ -428,7 +428,7 @@ func (r *Runtime) normalizeEvidence(e *model.Evidence, now time.Time) {
 
 // recompute rebuilds all derived state from the current evidence through the
 // reasoning orchestrator and state machine.
-func (r *Runtime) recompute(s *model.Session) {
+func (r *Runtime) recompute(ctx context.Context, s *model.Session) {
 	now := r.now()
 	prevMetrics := s.Metrics
 	prevConfidence := s.Confidence
@@ -439,12 +439,12 @@ func (r *Runtime) recompute(s *model.Session) {
 	}
 
 	sig := engine.Analyze(s)
-	ctx := &engine.ReasoningContext{
+	rtCtx := &engine.ReasoningContext{
 		Session: s,
 		Signals: sig,
 		Engines: r.reasoningEngines(),
 	}
-	if cycle, err := r.orchestrator.Run(context.Background(), ctx); err == nil && cycle != nil {
+	if cycle, err := r.orchestrator.Run(ctx, rtCtx); err == nil && cycle != nil {
 		s.ReasoningCycles = append(s.ReasoningCycles, *cycle)
 		s.AddJournal("reasoning_cycle", fmt.Sprintf(
 			"cycle %s: %d reasoners, %d applied, %d rejected",
@@ -463,7 +463,7 @@ func (r *Runtime) recompute(s *model.Session) {
 		s.InvestigationProgress = engine.ComputeInvestigationProgress(s, s.Coverage, s.Sufficiency)
 	}
 
-	r.applyIntelligenceCalibration(context.Background(), s)
+	r.applyIntelligenceCalibration(ctx, s)
 
 	engine.UpdateReasoningTrace(s, now)
 	engine.ApplyHypothesisTraces(s)

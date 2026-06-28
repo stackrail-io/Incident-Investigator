@@ -1,0 +1,150 @@
+# Investigation Specification v1 — Graph Extension
+#
+# Optional extension: investigation graph as canonical structured model.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Graph Extension
+  version: 1.0.0
+
+components:
+  schemas:
+    NodeType:
+      type: string
+      enum:
+        - investigation
+        - question
+        - evidence_request
+        - hypothesis
+        - application
+        - pod
+        - configuration
+        - trace
+        - database
+        - api
+        - timeline_event
+        - incident
+        - conclusion
+        - recommendation
+        - region
+        - cluster
+        - customer_impact
+        - custom
+        - evidence
+        - service
+        - deployment
+        - alert
+        - metric
+
+    EdgeType:
+      type: string
+      enum:
+        - supports
+        - contradicts
+        - causes
+        - triggered
+        - depends_on
+        - occurred_before
+        - occurred_after
+        - generated
+        - resolves
+        - requests
+        - belongs_to
+        - observed_on
+        - recovered_by
+        - correlates_with
+        - likely_caused
+        - recovered_after
+
+    GraphNode:
+      type: object
+      required: [id, type, label]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/NodeType'
+        label:
+          type: string
+        ref_id:
+          type: string
+          description: Reference to evidence, question, or hypothesis id.
+        properties:
+          type: object
+          additionalProperties: true
+
+    GraphEdge:
+      type: object
+      required: [id, from, to, type, confidence]
+      properties:
+        id:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        type:
+          $ref: '#/components/schemas/EdgeType'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 100
+        weight:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        evidence_refs:
+          type: array
+          items:
+            type: string
+        inferred:
+          type: boolean
+
+    GraphView:
+      type: object
+      required: [nodes, edges]
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GraphEdge'
+
+    GraphQueryKind:
+      type: string
+      enum:
+        - upstream
+        - downstream
+        - supporting_evidence
+        - contradictions
+        - unanswered_questions
+        - service_evidence
+        - blast_radius
+        - shortest_path
+        - strongest_path
+
+    GraphQuery:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          $ref: '#/components/schemas/GraphQueryKind'
+        target:
+          type: string
+        limit:
+          type: integer
+          default: 20
+
+  x-extension:
+    id: graph/v1
+    requires: investigation-spec/v1
+    principle: >
+      The investigation graph is the canonical source of truth. Reasoners
+      propose graph mutations as declarative actions; the runtime validates
+      and applies them.

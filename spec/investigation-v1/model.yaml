@@ -1,0 +1,393 @@
+# Investigation Specification v1 — Information Model
+#
+# OpenAPI 3.1 component schemas for the core investigation protocol.
+# Transport bindings (MCP, REST, gRPC) reference these types.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Model
+  version: 1.0.0
+  description: >
+    Vendor-neutral information model for AI-assisted incident investigations.
+
+components:
+  schemas:
+    # ── Primitives ──────────────────────────────────────────────────────────
+
+    TimeWindow:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+
+    # ── Core entities ─────────────────────────────────────────────────────────
+
+    Evidence:
+      type: object
+      required: [id, category, summary]
+      description: >
+        A single vendor-neutral observation. Vendor detail lives in payload.
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        category:
+          $ref: './categories.yaml#/components/schemas/EvidenceCategory'
+        source:
+          type: string
+          description: Provenance hint (e.g. provided_by_client, cloudwatch).
+        entity:
+          type: string
+          description: Service, host, or resource identifier.
+        summary:
+          type: string
+          description: One-line human-readable observation.
+        payload:
+          type: object
+          additionalProperties: true
+          description: Opaque vendor-specific detail.
+
+    EvidenceRequest:
+      type: object
+      required: [category, priority]
+      description: Planner-level evidence need (category + priority).
+      properties:
+        category:
+          $ref: './categories.yaml#/components/schemas/EvidenceCategory'
+        priority:
+          $ref: './categories.yaml#/components/schemas/Priority'
+        reason:
+          type: string
+
+    ProtocolEvidenceRequest:
+      type: object
+      required: [id, question_id, categories, priority, status]
+      description: Evidence requested to resolve a specific protocol question.
+      properties:
+        id:
+          type: string
+        question_id:
+          type: string
+        categories:
+          type: array
+          items:
+            $ref: './categories.yaml#/components/schemas/EvidenceCategory'
+        priority:
+          $ref: './categories.yaml#/components/schemas/Priority'
+        reason:
+          type: string
+        expected_confidence_gain:
+          type: number
+          minimum: 0
+          maximum: 100
+        status:
+          type: string
+          enum: [open, fulfilled]
+
+    Question:
+      type: object
+      required: [id, title, status]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: integer
+        status:
+          $ref: './lifecycle.yaml#/components/schemas/QuestionStatus'
+        confidence:
+          type: number
+        required_evidence:
+          type: array
+          items:
+            $ref: './categories.yaml#/components/schemas/EvidenceCategory'
+        supporting_evidence:
+          type: array
+          items:
+            type: string
+        contradicting_evidence:
+          type: array
+          items:
+            type: string
+        resolution:
+          $ref: '#/components/schemas/QuestionResolution'
+        depends_on:
+          type: array
+          items:
+            type: string
+
+    QuestionResolution:
+      type: object
+      required: [question_id, status]
+      properties:
+        question_id:
+          type: string
+        status:
+          type: string
+          enum: [confirmed, rejected, insufficient_evidence, unknown]
+        confidence:
+          type: number
+        reason:
+          type: string
+        supporting_evidence:
+          type: array
+          items:
+            type: string
+        contradicting_evidence:
+          type: array
+          items:
+            type: string
+        resolved_at:
+          type: string
+          format: date-time
+
+    Hypothesis:
+      type: object
+      required: [id, statement, confidence, status]
+      description: One competing explanation; engines maintain a ranked field.
+      properties:
+        id:
+          type: string
+        statement:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 100
+        status:
+          $ref: './lifecycle.yaml#/components/schemas/HypothesisStatus'
+        rationale:
+          type: string
+        supporting_evidence:
+          type: array
+          items:
+            type: string
+        conflicting_evidence:
+          type: array
+          items:
+            type: string
+
+    Finding:
+      type: object
+      required: [type, summary]
+      description: Reasoner observation (see reasoning extension for emission rules).
+      properties:
+        type:
+          type: string
+        summary:
+          type: string
+        confidence:
+          type: number
+        reason:
+          type: string
+        refs:
+          type: array
+          items:
+            type: string
+
+    Recommendation:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        source:
+          type: string
+          description: Reasoner or report section that produced this.
+
+    InvestigationPlan:
+      type: object
+      required: [id, goal, current_stage, questions]
+      properties:
+        id:
+          type: string
+        goal:
+          $ref: './categories.yaml#/components/schemas/InvestigationGoal'
+        current_stage:
+          $ref: './lifecycle.yaml#/components/schemas/InvestigationStage'
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        evidence_requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProtocolEvidenceRequest'
+        resolution_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionResolution'
+        confidence:
+          type: number
+
+    SufficiencyReport:
+      type: object
+      required: [can_answer, overall_confidence]
+      properties:
+        can_answer:
+          type: boolean
+        overall_confidence:
+          type: number
+        coverage:
+          type: number
+        blocking_questions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              question:
+                type: string
+              priority:
+                $ref: './categories.yaml#/components/schemas/Priority'
+        missing_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceRequest'
+        reason:
+          type: string
+
+    Report:
+      type: object
+      required: [investigation_id, question, executive_summary, confidence]
+      description: Final deliverable from FinishInvestigation.
+      properties:
+        investigation_id:
+          type: string
+          description: Alias session_id in reference MCP binding.
+        question:
+          type: string
+        executive_summary:
+          type: string
+        timeline:
+          type: array
+          items:
+            type: object
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+        hypotheses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hypothesis'
+        root_cause_candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hypothesis'
+        graph:
+          $ref: './extensions/graph-v1.yaml#/components/schemas/GraphView'
+        contradictions:
+          type: array
+          items:
+            type: object
+        missing_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceRequest'
+        recommendations:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+        postmortem:
+          type: string
+
+    Investigation:
+      type: object
+      required: [investigation_id, question, state, evidence, hypotheses]
+      description: >
+        Complete investigation resource. Central aggregate root of the protocol.
+      properties:
+        investigation_id:
+          type: string
+          description: Unique id. Reference impl JSON field session_id.
+          x-legacy-alias: session_id
+        question:
+          type: string
+        service:
+          type: string
+        goal:
+          $ref: './categories.yaml#/components/schemas/InvestigationGoal'
+        time_window:
+          $ref: '#/components/schemas/TimeWindow'
+
+        state:
+          $ref: './lifecycle.yaml#/components/schemas/InvestigationState'
+        status:
+          $ref: './lifecycle.yaml#/components/schemas/LegacyStatus'
+          deprecated: true
+        plan:
+          $ref: '#/components/schemas/InvestigationPlan'
+
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+        required_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceRequest'
+        missing_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvidenceRequest'
+
+        graph:
+          $ref: './extensions/graph-v1.yaml#/components/schemas/GraphView'
+        hypotheses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hypothesis'
+        findings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
+        recommendations:
+          type: array
+          items:
+            type: string
+
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 100
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        sufficiency:
+          $ref: '#/components/schemas/SufficiencyReport'
+
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+  # Entity relationship diagram (documentation)
+  x-relationships:
+    Investigation:
+      contains: [Question, Evidence, Hypothesis, Finding, GraphView]
+    Question:
+      depends_on: Question
+      requires: EvidenceCategory
+    ProtocolEvidenceRequest:
+      fulfills: Question
+    Evidence:
+      supports: Hypothesis
+      contradicts: Hypothesis
+    Hypothesis:
+      competes_with: Hypothesis

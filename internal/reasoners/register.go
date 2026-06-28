@@ -12,6 +12,6 @@ func DefaultRegistry(eng engine.RuntimeEngines) *reasoning.Registry {
 	reg.Register(NewCausalReasoner())
 	reg.Register(NewHypothesisReasoner(eng))
 	reg.Register(NewConsistencyReasoner(eng))
-	reg.Register(reasoning.NewSemanticReasoner(reasoning.NewMockLLM()))
+	reg.Register(reasoning.NewSemanticReasoner(reasoning.NewHostLLM()))
 	return reg
 }

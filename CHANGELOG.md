@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Investigation Specification v1** — formal protocol (`spec/investigation-v1/`): information model, lifecycle, operations, and extensions (graph, reasoning, intelligence).
+- **Semantic reasoner** uses the MCP host LLM (Claude, Codex) via MCP sampling during evidence recomputation when the client supports it.
+
 ## [1.0.0] - 2026-06-28
 
 ### Added
@@ -23,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Conflict resolution for competing confidence deltas (weighted merge with full cycle logging).
 - Reasoning cycles persisted on session and journal for replay via `get_reasoning_cycles`.
 - Reasoner registry for plugin registration without runtime code changes.
-- Built-in capability reasoners: **Temporal**, **Causal**, **Hypothesis**, **Consistency**, **Semantic** (LLM interface + mock only — no OpenAI/Anthropic/Gemini clients).
+- Built-in capability reasoners: **Temporal**, **Causal**, **Hypothesis**, **Consistency**, **Semantic** (host LLM via MCP sampling when supported).
 - **Incident Intelligence** — separate subsystem that learns from completed investigations without coupling history to the runtime.
 - `InvestigationArchive` interface with `MemoryArchive`; immutable `InvestigationSnapshot` and `InvestigationFingerprint` on completion.
 - Deterministic `SimilarityEngine` comparing goal, questions, graph topology, timeline, evidence categories, hypotheses, and root cause (no embeddings).

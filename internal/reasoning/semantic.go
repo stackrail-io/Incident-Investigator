@@ -16,7 +16,7 @@ type LLMResponse struct {
 
 // LLM is the provider-agnostic semantic reasoning backend.
 type LLM interface {
-	Analyze(prompt string) (*LLMResponse, error)
+	Analyze(ctx context.Context, prompt string) (*LLMResponse, error)
 }
 
 // MockLLM returns deterministic structured actions for tests.
@@ -30,7 +30,7 @@ type MockLLM struct {
 func NewMockLLM() *MockLLM { return &MockLLM{} }
 
 // Analyze implements LLM.
-func (m *MockLLM) Analyze(prompt string) (*LLMResponse, error) {
+func (m *MockLLM) Analyze(_ context.Context, prompt string) (*LLMResponse, error) {
 	m.LastPrompt = prompt
 	if m.Err != nil {
 		return nil, m.Err
@@ -43,14 +43,21 @@ func (m *MockLLM) Analyze(prompt string) (*LLMResponse, error) {
 
 // BuildSemanticPrompt serializes investigation context for an LLM backend.
 func BuildSemanticPrompt(inv *Investigation) string {
+	type evidenceItem struct {
+		ID       string `json:"id"`
+		Category string `json:"category"`
+		Entity   string `json:"entity,omitempty"`
+		Summary  string `json:"summary"`
+	}
 	type summary struct {
-		Question   string              `json:"question"`
-		Goal       string              `json:"goal"`
-		Evidence   int                 `json:"evidence_count"`
-		Hypotheses []model.Hypothesis  `json:"hypotheses"`
-		OpenQuestions []model.Question `json:"open_questions,omitempty"`
-		GraphNodes int                 `json:"graph_nodes"`
-		TraceLen   int                 `json:"reasoning_trace_len"`
+		Question          string              `json:"question"`
+		Goal              string              `json:"goal"`
+		Evidence          int                 `json:"evidence_count"`
+		EvidenceSummaries []evidenceItem      `json:"evidence"`
+		Hypotheses        []model.Hypothesis  `json:"hypotheses"`
+		OpenQuestions     []model.Question    `json:"open_questions,omitempty"`
+		GraphNodes        int                 `json:"graph_nodes"`
+		TraceLen          int                 `json:"reasoning_trace_len"`
 	}
 	s := summary{
 		Question:   inv.Session.Question,
@@ -69,8 +76,23 @@ func BuildSemanticPrompt(inv *Investigation) string {
 	if inv.Session.Graph != nil {
 		s.GraphNodes = len(inv.Session.Graph.Nodes)
 	}
+	var evItems []evidenceItem
+	for _, e := range inv.Session.Evidence {
+		if e == nil {
+			continue
+		}
+		evItems = append(evItems, evidenceItem{
+			ID: e.ID, Category: string(e.Category), Entity: e.Entity, Summary: e.Summary,
+		})
+	}
+	s.EvidenceSummaries = evItems
 	b, _ := json.Marshal(s)
 	return string(b)
+}
+
+func isHostLLM(llm LLM) bool {
+	_, ok := llm.(*HostLLM)
+	return ok
 }
 
 // ParseLLMResponse converts structured LLM output into reasoning actions.
@@ -112,9 +134,14 @@ func (s *SemanticReasoner) Priority() int   { return 50 }
 func (s *SemanticReasoner) Supports(_ *model.Session) bool { return s.llm != nil }
 
 func (s *SemanticReasoner) Analyze(ctx context.Context, inv *Investigation) (*model.ReasoningResult, error) {
-	_ = ctx
+	if inv == nil || inv.Session == nil || len(inv.Session.Evidence) == 0 {
+		return &model.ReasoningResult{Reasoner: s.Name()}, nil
+	}
+	if HostLLMBackendFromContext(ctx) == nil && isHostLLM(s.llm) {
+		return &model.ReasoningResult{Reasoner: s.Name()}, nil
+	}
 	prompt := BuildSemanticPrompt(inv)
-	resp, err := s.llm.Analyze(prompt)
+	resp, err := s.llm.Analyze(ctx, prompt)
 	if err != nil {
 		return nil, err
 	}

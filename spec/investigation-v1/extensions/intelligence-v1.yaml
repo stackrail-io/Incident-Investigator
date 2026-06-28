@@ -1,0 +1,140 @@
+# Investigation Specification v1 — Intelligence Extension
+#
+# Optional extension: historical learning decoupled from the core runtime.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Intelligence Extension
+  version: 1.0.0
+
+components:
+  schemas:
+    InvestigationSnapshot:
+      type: object
+      required: [investigation_id, goal, confidence, completed_at]
+      description: Immutable record of a completed investigation.
+      properties:
+        investigation_id:
+          type: string
+        goal:
+          $ref: '../categories.yaml#/components/schemas/InvestigationGoal'
+        root_cause:
+          type: string
+        timeline:
+          type: array
+          items:
+            type: object
+        knowledge_graph:
+          $ref: './graph-v1.yaml#/components/schemas/GraphView'
+        evidence_summary:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                $ref: '../categories.yaml#/components/schemas/EvidenceCategory'
+              count:
+                type: integer
+        hypotheses:
+          type: array
+          items:
+            $ref: '../model.yaml#/components/schemas/Hypothesis'
+        confidence:
+          type: number
+        fingerprint:
+          type: object
+          properties:
+            goal:
+              type: string
+            graph_hash:
+              type: string
+            timeline_hash:
+              type: string
+            root_cause:
+              type: string
+        completed_at:
+          type: string
+          format: date-time
+
+    SimilarityResult:
+      type: object
+      required: [investigation_id, score, matching_reasons]
+      properties:
+        investigation_id:
+          type: string
+        score:
+          type: number
+          minimum: 0
+          maximum: 100
+        matching_reasons:
+          type: array
+          items:
+            type: string
+        root_cause:
+          type: string
+
+    SuggestedPattern:
+      type: object
+      required: [id, name, confidence]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        confidence:
+          type: number
+        recommended_questions:
+          type: array
+          items:
+            type: object
+            properties:
+              text:
+                type: string
+
+    CalibrationResponse:
+      type: object
+      required: [original_confidence, calibrated_confidence]
+      properties:
+        original_confidence:
+          type: number
+        calibrated_confidence:
+          type: number
+        delta:
+          type: number
+        reason:
+          type: string
+        historical_sample_size:
+          type: integer
+        explanation:
+          type: object
+          properties:
+            similar_investigations:
+              type: integer
+            correct_count:
+              type: integer
+            supporting_history:
+              type: array
+              items:
+                type: string
+
+  x-extension:
+    id: intelligence/v1
+    requires: investigation-spec/v1
+    principle: >
+      The core runtime is stateless with respect to history. Intelligence
+      is an optional service the runtime queries — never an internal archive.
+
+    api:
+      - FindSimilarInvestigations
+      - SuggestPatterns
+      - CalibrateConfidence
+
+    archive:
+      interface: InvestigationArchive
+      operations: [Store, Find, Search]
+      note: Reference impl uses in-memory archive; spec does not mandate storage.
+
+    similarity:
+      note: v1 requires deterministic similarity only; no embeddings or vector DBs.

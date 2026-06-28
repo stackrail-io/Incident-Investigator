@@ -137,7 +137,8 @@ func (s *Server) registerTools() {
 	}, s.handleCalibrateConfidence)
 }
 
-func (s *Server) handleStart(ctx context.Context, _ *mcp.CallToolRequest, in StartInput) (*mcp.CallToolResult, StartOutput, error) {
+func (s *Server) handleStart(ctx context.Context, req *mcp.CallToolRequest, in StartInput) (*mcp.CallToolResult, StartOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if strings.TrimSpace(in.Question) == "" {
 		return nil, StartOutput{}, toolErr("question is required")
 	}
@@ -154,7 +155,7 @@ func (s *Server) handleStart(ctx context.Context, _ *mcp.CallToolRequest, in Sta
 		return nil, StartOutput{}, toolErr("time_window end must not be before start")
 	}
 
-	sess, err := s.rt.Start(runtime.StartInput{
+	sess, err := s.rt.Start(ctx, runtime.StartInput{
 		Question:   in.Question,
 		Service:    in.Service,
 		TimeWindow: tw,
@@ -183,7 +184,8 @@ func (s *Server) handleStart(ctx context.Context, _ *mcp.CallToolRequest, in Sta
 	}, nil
 }
 
-func (s *Server) handleSubmit(ctx context.Context, _ *mcp.CallToolRequest, in SubmitInput) (*mcp.CallToolResult, SubmitOutput, error) {
+func (s *Server) handleSubmit(ctx context.Context, req *mcp.CallToolRequest, in SubmitInput) (*mcp.CallToolResult, SubmitOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, SubmitOutput{}, toolErr("session_id is required")
 	}
@@ -200,7 +202,7 @@ func (s *Server) handleSubmit(ctx context.Context, _ *mcp.CallToolRequest, in Su
 		evidence = append(evidence, me)
 	}
 
-	sess, err := s.rt.Submit(in.SessionID, evidence)
+	sess, err := s.rt.Submit(ctx, in.SessionID, evidence)
 	if err != nil {
 		return nil, SubmitOutput{}, mapRuntimeError(err)
 	}
@@ -232,11 +234,12 @@ func (s *Server) handleSubmit(ctx context.Context, _ *mcp.CallToolRequest, in Su
 	}, nil
 }
 
-func (s *Server) handleStatus(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, StatusOutput, error) {
+func (s *Server) handleStatus(ctx context.Context, req *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, StatusOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, StatusOutput{}, toolErr("session_id is required")
 	}
-	sess, err := s.rt.Get(in.SessionID)
+	sess, err := s.rt.Get(ctx, in.SessionID)
 	if err != nil {
 		return nil, StatusOutput{}, mapRuntimeError(err)
 	}
@@ -275,36 +278,39 @@ func (s *Server) handleStatus(ctx context.Context, _ *mcp.CallToolRequest, in Se
 	}, nil
 }
 
-func (s *Server) handleExplainInvestigation(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, runtime.ExplainInvestigationOutput, error) {
+func (s *Server) handleExplainInvestigation(ctx context.Context, req *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, runtime.ExplainInvestigationOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, runtime.ExplainInvestigationOutput{}, toolErr("session_id is required")
 	}
-	out, err := s.rt.ExplainInvestigation(in.SessionID)
+	out, err := s.rt.ExplainInvestigation(ctx, in.SessionID)
 	if err != nil {
 		return nil, runtime.ExplainInvestigationOutput{}, mapRuntimeError(err)
 	}
 	return nil, *out, nil
 }
 
-func (s *Server) handleGetPlan(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, PlanOutput, error) {
+func (s *Server) handleGetPlan(ctx context.Context, req *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, PlanOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, PlanOutput{}, toolErr("session_id is required")
 	}
-	plan, err := s.rt.GetPlan(in.SessionID)
+	plan, err := s.rt.GetPlan(ctx, in.SessionID)
 	if err != nil {
 		return nil, PlanOutput{}, mapRuntimeError(err)
 	}
 	return nil, PlanOutput{Plan: plan}, nil
 }
 
-func (s *Server) handleResolveQuestion(ctx context.Context, _ *mcp.CallToolRequest, in ResolveQuestionInput) (*mcp.CallToolResult, ResolveQuestionOutput, error) {
+func (s *Server) handleResolveQuestion(ctx context.Context, req *mcp.CallToolRequest, in ResolveQuestionInput) (*mcp.CallToolResult, ResolveQuestionOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, ResolveQuestionOutput{}, toolErr("session_id is required")
 	}
 	if in.QuestionID == "" {
 		return nil, ResolveQuestionOutput{}, toolErr("question_id is required")
 	}
-	res, sess, err := s.rt.ResolveQuestion(runtime.ResolveQuestionInput{
+	res, sess, err := s.rt.ResolveQuestion(ctx, runtime.ResolveQuestionInput{
 		SessionID:  in.SessionID,
 		QuestionID: in.QuestionID,
 		Confirmed:  in.Confirmed,
@@ -320,11 +326,12 @@ func (s *Server) handleResolveQuestion(ctx context.Context, _ *mcp.CallToolReque
 	}, nil
 }
 
-func (s *Server) handleListOpenQuestions(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, OpenQuestionsOutput, error) {
+func (s *Server) handleListOpenQuestions(ctx context.Context, req *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, OpenQuestionsOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, OpenQuestionsOutput{}, toolErr("session_id is required")
 	}
-	questions, err := s.rt.ListOpenQuestions(in.SessionID)
+	questions, err := s.rt.ListOpenQuestions(ctx, in.SessionID)
 	if err != nil {
 		return nil, OpenQuestionsOutput{}, mapRuntimeError(err)
 	}
@@ -473,22 +480,24 @@ func resolutionHistory(plan *model.InvestigationPlan) []model.QuestionResolution
 	return plan.ResolutionHistory
 }
 
-func (s *Server) handleExplain(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, runtime.ExplainOutput, error) {
+func (s *Server) handleExplain(ctx context.Context, req *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, runtime.ExplainOutput, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, runtime.ExplainOutput{}, toolErr("session_id is required")
 	}
-	out, err := s.rt.Explain(in.SessionID)
+	out, err := s.rt.Explain(ctx, in.SessionID)
 	if err != nil {
 		return nil, runtime.ExplainOutput{}, mapRuntimeError(err)
 	}
 	return nil, *out, nil
 }
 
-func (s *Server) handleFinish(ctx context.Context, _ *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, model.Report, error) {
+func (s *Server) handleFinish(ctx context.Context, req *mcp.CallToolRequest, in SessionIDInput) (*mcp.CallToolResult, model.Report, error) {
+	ctx = ctxWithHostLLM(ctx, req)
 	if in.SessionID == "" {
 		return nil, model.Report{}, toolErr("session_id is required")
 	}
-	report, sess, err := s.rt.Finish(in.SessionID)
+	report, sess, err := s.rt.Finish(ctx, in.SessionID)
 	if err != nil {
 		return nil, model.Report{}, mapRuntimeError(err)
 	}

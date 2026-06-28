@@ -1,0 +1,148 @@
+# Investigation Specification v1 — Lifecycle
+#
+# Canonical state machine for investigations.
+# Stage is an annotation within a state, not a parallel lifecycle.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Lifecycle
+  version: 1.0.0
+
+components:
+  schemas:
+    InvestigationState:
+      type: string
+      description: Canonical lifecycle state (normative).
+      enum:
+        - started
+        - planning
+        - collecting_evidence
+        - reasoning
+        - waiting_for_evidence
+        - high_confidence
+        - completed
+        - failed
+
+    InvestigationStage:
+      type: string
+      description: >
+        Protocol phase annotation. Substate of an investigation while
+        collecting or reasoning — NOT a replacement for InvestigationState.
+      enum:
+        - planning
+        - question_generation
+        - evidence_collection
+        - question_resolution
+        - hypothesis_evaluation
+        - need_more_evidence
+        - completed
+
+    LegacyStatus:
+      type: string
+      description: >
+        Deprecated compatibility alias. New consumers MUST use InvestigationState.
+        Reference implementation maps state → status automatically.
+      enum:
+        - collecting_evidence
+        - ready_to_conclude
+        - completed
+
+    QuestionStatus:
+      type: string
+      enum:
+        - unknown
+        - waiting_for_evidence
+        - partially_answered
+        - answered
+        - rejected
+
+    HypothesisStatus:
+      type: string
+      enum:
+        - proposed
+        - supported
+        - leading
+        - refuted
+        - confirmed
+
+# State machine definition (normative)
+x-state-machine:
+  initial: started
+  terminal:
+    - completed
+    - failed
+
+  states:
+    started:
+      description: Investigation created; plan not yet materialized.
+      on:
+        PLAN_MATERIALIZED: planning
+
+    planning:
+      description: Questions and initial evidence requests generated.
+      on:
+        EVIDENCE_REQUESTED: collecting_evidence
+        REASONING_COMPLETE: reasoning
+
+    collecting_evidence:
+      description: Awaiting or ingesting evidence from the assistant.
+      on:
+        EVIDENCE_SUBMITTED: reasoning
+        SUFFICIENCY_REACHED: high_confidence
+
+    reasoning:
+      description: Reasoners analyzing evidence; graph and hypotheses updating.
+      on:
+        BLOCKED_ON_EVIDENCE: waiting_for_evidence
+        CONFIDENCE_THRESHOLD_MET: high_confidence
+        REASONING_COMPLETE: collecting_evidence
+
+    waiting_for_evidence:
+      description: Reasoning blocked; specific evidence required.
+      on:
+        EVIDENCE_SUBMITTED: reasoning
+
+    high_confidence:
+      description: Investigation may conclude; further evidence optional.
+      on:
+        FINISH: completed
+        EVIDENCE_SUBMITTED: reasoning
+
+    completed:
+      description: Final report produced; mutations rejected.
+
+    failed:
+      description: Investigation aborted or invalidated.
+
+  transitions:
+    - from: [started, planning, collecting_evidence, reasoning, waiting_for_evidence, high_confidence]
+      event: FINISH
+      to: completed
+      guard: can_answer_or_operator_override
+
+    - from: [collecting_evidence, reasoning, waiting_for_evidence]
+      event: EVIDENCE_SUBMITTED
+      to: reasoning
+      effect: recompute
+
+  legacy_mapping:
+    description: Reference implementation compatibility (Investigation Spec v1 § normalization)
+    state_to_status:
+      started: collecting_evidence
+      planning: collecting_evidence
+      collecting_evidence: collecting_evidence
+      reasoning: collecting_evidence
+      waiting_for_evidence: collecting_evidence
+      high_confidence: ready_to_conclude
+      completed: completed
+      failed: collecting_evidence
+
+  stage_hints:
+    description: Typical stage annotation per state (non-normative guidance)
+    started: planning
+    planning: planning
+    collecting_evidence: evidence_collection
+    reasoning: hypothesis_evaluation
+    waiting_for_evidence: need_more_evidence
+    high_confidence: hypothesis_evaluation
+    completed: completed

@@ -111,6 +111,36 @@ func TestHybridOrchestratorDeterministic(t *testing.T) {
 	}
 }
 
+func TestHostLLMWithBackend(t *testing.T) {
+	backend := &fakeHostBackend{response: `{"findings":[{"type":"CreateRecommendation","recommendation":"Review deploy logs."}],"recommendations":["Check rollback timing."]}`}
+	ctx := reasoning.WithHostLLMBackend(context.Background(), backend)
+	host := reasoning.NewHostLLM()
+	resp, err := host.Analyze(ctx, `{"question":"Why fail?"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Recommendations) == 0 {
+		t.Fatal("expected recommendations")
+	}
+	sem := reasoning.NewSemanticReasoner(host)
+	s := testSession()
+	res, err := sem.Analyze(ctx, &reasoning.Investigation{Session: s})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Actions) == 0 {
+		t.Fatal("expected semantic actions from host LLM")
+	}
+}
+
+type fakeHostBackend struct {
+	response string
+}
+
+func (f *fakeHostBackend) Complete(_ context.Context, _, _ string) (string, error) {
+	return f.response, nil
+}
+
 func TestSemanticReasonerMockLLM(t *testing.T) {
 	mock := reasoning.NewMockLLM()
 	mock.Response = &reasoning.LLMResponse{

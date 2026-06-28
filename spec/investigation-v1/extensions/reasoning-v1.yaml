@@ -1,0 +1,140 @@
+# Investigation Specification v1 — Reasoning Extension
+#
+# Optional extension: multi-reasoner architecture with declarative actions.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Reasoning Extension
+  version: 1.0.0
+
+components:
+  schemas:
+    ActionType:
+      type: string
+      enum:
+        - IncreaseHypothesisConfidence
+        - DecreaseHypothesisConfidence
+        - CreateQuestion
+        - ResolveQuestion
+        - RejectQuestion
+        - CreateEvidenceRequest
+        - LinkGraphNodes
+        - CreateHypothesis
+        - RejectHypothesis
+        - PromoteHypothesis
+        - CreateRecommendation
+        - MarkContradiction
+        - MarkInvestigationComplete
+        - SetContradictions
+        - ReplaceHypotheses
+        - SetTimeline
+        - UpdateGraph
+        - SetBlastRadius
+        - SetEvidencePlan
+        - SetCoverage
+        - SetStrategy
+        - SetSufficiency
+        - SetConfidence
+        - SetProgress
+        - SetInvestigationProgress
+        - SetConfidenceBreakdown
+        - SetEvidenceImportance
+
+    ReasoningAction:
+      type: object
+      required: [type, reasoner]
+      description: >
+        Declarative change proposed by a reasoner. Reasoners MUST NOT mutate
+        investigation state directly; the runtime validates and applies actions.
+      properties:
+        type:
+          $ref: '#/components/schemas/ActionType'
+        reasoner:
+          type: string
+        reason:
+          type: string
+        hypothesis_id:
+          type: string
+        delta:
+          type: number
+        question_id:
+          type: string
+        recommendation:
+          type: string
+
+    ReasoningResult:
+      type: object
+      required: [reasoner, actions]
+      properties:
+        reasoner:
+          type: string
+        confidence:
+          type: number
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReasoningAction'
+        findings:
+          type: array
+          items:
+            $ref: '../model.yaml#/components/schemas/Finding'
+
+    ReasoningCycle:
+      type: object
+      required: [cycle_id, reasoners, started_at]
+      properties:
+        cycle_id:
+          type: string
+        strategy:
+          type: string
+          enum: [sequential, parallel, weighted_voting, priority, consensus]
+        reasoners:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReasoningResult'
+        applied_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReasoningAction'
+        rejected_actions:
+          type: array
+          items:
+            type: object
+            properties:
+              action:
+                $ref: '#/components/schemas/ReasoningAction'
+              reason:
+                type: string
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        duration_ms:
+          type: number
+
+  x-extension:
+    id: reasoning/v1
+    requires: investigation-spec/v1
+    principle: >
+      Reasoners make observations. The runtime conducts the investigation.
+      Each reasoner implements Supports(session) and Analyze(context, investigation)
+      returning actions and findings — never direct state mutation.
+
+    built_in_reasoners:
+      - name: temporal
+        priority: 100
+        responsibility: Timeline ordering, evidence planning, temporal edges
+      - name: causal
+        priority: 90
+        responsibility: Graph-native cause/effect, blast radius, paths
+      - name: hypothesis
+        priority: 80
+        responsibility: Competing hypotheses, confidence, coverage, graph rebuild
+      - name: consistency
+        priority: 70
+        responsibility: Contradictions, impossible sequences, graph integrity
+      - name: semantic
+        priority: 50
+        responsibility: Host LLM via MCP sampling when client supports it

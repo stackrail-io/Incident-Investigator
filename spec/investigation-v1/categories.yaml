@@ -1,0 +1,50 @@
+# Investigation Specification v1 — Evidence Categories
+#
+# Normative enum of vendor-neutral evidence categories.
+# Assistants map vendor-specific observations into exactly one category.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Categories
+  version: 1.0.0
+
+components:
+  schemas:
+    EvidenceCategory:
+      type: string
+      description: >
+        Vendor-neutral evidence classification. Implementations MUST reject
+        unknown categories or map them to `custom`.
+      enum:
+        - application_logs
+        - infrastructure_events
+        - deployment_events
+        - alert_events
+        - metrics
+        - trace_events
+        - configuration_changes
+        - network_events
+        - database_events
+        - security_events
+        - human_context
+        - custom
+
+    Priority:
+      type: string
+      enum:
+        - high
+        - medium
+        - low
+
+    InvestigationGoal:
+      type: string
+      description: Scopes what the investigation optimizes for.
+      enum:
+        - root_cause
+        - timeline
+        - blast_radius
+        - deployment_verification
+        - performance_regression
+        - availability
+        - custom
+      default: root_cause

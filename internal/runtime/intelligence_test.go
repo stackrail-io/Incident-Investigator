@@ -18,24 +18,24 @@ func TestIntelligenceFindSimilarAfterFinish(t *testing.T) {
 
 	// Archive two completed investigations.
 	for _, fx := range []fixtures.Fixture{fixtures.BadDeployment(), fixtures.DatabaseOutage()} {
-		sess, err := rt.Start(runtime.StartInput{
+		sess, err := rt.Start(context.Background(), runtime.StartInput{
 			Question: fx.Question, Service: fx.Service, TimeWindow: fx.Window,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		for _, batch := range fx.Batches {
-			if _, err := rt.Submit(sess.ID, batch); err != nil {
+			if _, err := rt.Submit(context.Background(), sess.ID, batch); err != nil {
 				t.Fatal(err)
 			}
 		}
-		if _, _, err := rt.Finish(sess.ID); err != nil {
+		if _, _, err := rt.Finish(context.Background(), sess.ID); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	// New investigation similar to bad deployment.
-	sess, err := rt.Start(runtime.StartInput{
+	sess, err := rt.Start(context.Background(), runtime.StartInput{
 		Question:   "Why did checkout fail yesterday?",
 		Service:    "checkout-api",
 		TimeWindow: fixtures.BadDeployment().Window,

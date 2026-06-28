@@ -1,0 +1,287 @@
+# Investigation Specification v1 — Operations
+#
+# Transport-agnostic protocol operations.
+# MCP tool names are reference bindings only.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Operations
+  version: 1.0.0
+
+paths:
+  /investigations:
+    post:
+      operationId: StartInvestigation
+      summary: Begin a new investigation
+      x-mcp-binding: start_investigation
+      x-required-tier: core
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartInvestigationRequest'
+      responses:
+        '200':
+          description: Investigation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StartInvestigationResponse'
+
+  /investigations/{investigation_id}/evidence:
+    post:
+      operationId: SubmitEvidence
+      summary: Submit evidence and trigger reasoning
+      x-mcp-binding: submit_evidence
+      x-required-tier: core
+      parameters:
+        - name: investigation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitEvidenceRequest'
+      responses:
+        '200':
+          description: Evidence accepted; investigation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitEvidenceResponse'
+
+  /investigations/{investigation_id}:
+    get:
+      operationId: GetInvestigation
+      summary: Read current investigation snapshot
+      x-mcp-binding: get_investigation_status
+      x-required-tier: core
+      parameters:
+        - name: investigation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current investigation state
+          content:
+            application/json:
+              schema:
+                $ref: './model.yaml#/components/schemas/Investigation'
+
+  /investigations/{investigation_id}/questions/{question_id}/resolve:
+    post:
+      operationId: ResolveQuestion
+      summary: Explicitly resolve a protocol question
+      x-mcp-binding: resolve_question
+      x-required-tier: core
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmed]
+              properties:
+                confirmed:
+                  type: boolean
+                reason:
+                  type: string
+
+  /investigations/{investigation_id}/questions/open:
+    get:
+      operationId: ListOpenQuestions
+      summary: Unresolved questions sorted by priority
+      x-mcp-binding: list_open_questions
+      x-required-tier: core
+
+  /investigations/{investigation_id}/finish:
+    post:
+      operationId: FinishInvestigation
+      summary: Conclude investigation and produce report
+      x-mcp-binding: finish_investigation
+      x-required-tier: core
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: './model.yaml#/components/schemas/Report'
+
+  /investigations/{investigation_id}/explain:
+    get:
+      operationId: ExplainInvestigation
+      summary: Protocol-centric debug snapshot
+      x-mcp-binding: explain_investigation
+      x-required-tier: core
+
+  /investigations/{investigation_id}/reasoning:
+    get:
+      operationId: ExplainReasoning
+      summary: Hypothesis and trace debug snapshot
+      x-mcp-binding: explain_reasoning
+      x-required-tier: core
+
+  # ── Graph extension (optional tier) ─────────────────────────────────────
+
+  /investigations/{investigation_id}/graph:
+    get:
+      operationId: GetGraph
+      x-mcp-binding: get_graph
+      x-required-tier: graph
+
+  /investigations/{investigation_id}/graph/query:
+    post:
+      operationId: QueryGraph
+      x-mcp-binding: query_graph
+      x-required-tier: graph
+
+  /investigations/{investigation_id}/graph/subgraph:
+    post:
+      operationId: GetSubgraph
+      x-mcp-binding: get_subgraph
+      x-required-tier: graph
+
+  /investigations/{investigation_id}/graph/explain-path:
+    post:
+      operationId: ExplainPath
+      x-mcp-binding: explain_path
+      x-required-tier: graph
+
+  # ── Reasoning extension (optional tier) ─────────────────────────────────
+
+  /investigations/{investigation_id}/reasoning-cycles:
+    get:
+      operationId: GetReasoningCycles
+      x-mcp-binding: get_reasoning_cycles
+      x-required-tier: reasoning
+
+  # ── Intelligence extension (optional tier) ──────────────────────────────
+
+  /investigations/{investigation_id}/similar:
+    get:
+      operationId: FindSimilarInvestigations
+      x-mcp-binding: find_similar_investigations
+      x-required-tier: intelligence
+
+  /investigations/{investigation_id}/patterns:
+    get:
+      operationId: SuggestPatterns
+      x-mcp-binding: suggest_patterns
+      x-required-tier: intelligence
+
+  /investigations/{investigation_id}/calibrate:
+    post:
+      operationId: CalibrateConfidence
+      x-mcp-binding: calibrate_confidence
+      x-required-tier: intelligence
+
+components:
+  schemas:
+    StartInvestigationRequest:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+        service:
+          type: string
+        goal:
+          $ref: './categories.yaml#/components/schemas/InvestigationGoal'
+        time_window:
+          $ref: './model.yaml#/components/schemas/TimeWindow'
+
+    StartInvestigationResponse:
+      type: object
+      required: [investigation_id, state, plan]
+      properties:
+        investigation_id:
+          type: string
+          x-legacy-alias: session_id
+        state:
+          $ref: './lifecycle.yaml#/components/schemas/InvestigationState'
+        goal:
+          $ref: './categories.yaml#/components/schemas/InvestigationGoal'
+        plan:
+          $ref: './model.yaml#/components/schemas/InvestigationPlan'
+        questions:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/Question'
+        evidence_requests:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/ProtocolEvidenceRequest'
+        required_evidence:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/EvidenceRequest'
+        confidence:
+          type: number
+        progress:
+          type: number
+        hypotheses:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/Hypothesis'
+
+    SubmitEvidenceRequest:
+      type: object
+      required: [evidence]
+      properties:
+        evidence:
+          type: array
+          minItems: 1
+          items:
+            $ref: './model.yaml#/components/schemas/Evidence'
+
+    SubmitEvidenceResponse:
+      type: object
+      properties:
+        progress:
+          type: number
+        confidence:
+          type: number
+        confidence_delta:
+          type: number
+        state:
+          $ref: './lifecycle.yaml#/components/schemas/InvestigationState'
+        resolved_questions:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/QuestionResolution'
+        new_questions:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/Question'
+        updated_hypotheses:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/Hypothesis'
+        missing_evidence:
+          type: array
+          items:
+            $ref: './model.yaml#/components/schemas/EvidenceRequest'
+
+  x-operation-semantics:
+    StartInvestigation:
+      effects: [create_investigation, generate_plan, initial_reasoning_cycle]
+      lifecycle: started → planning → collecting_evidence
+
+    SubmitEvidence:
+      preconditions: [investigation_not_completed]
+      effects: [append_evidence, reasoning_cycle, update_graph, update_hypotheses]
+      lifecycle: → reasoning → (waiting_for_evidence | high_confidence)
+
+    FinishInvestigation:
+      preconditions: [investigation_exists]
+      effects: [final_reasoning_cycle, generate_report, archive_optional]
+      lifecycle: → completed
+
+    ResolveQuestion:
+      effects: [record_resolution, update_plan, adjust_confidence]
