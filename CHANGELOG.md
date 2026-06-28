@@ -7,17 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Install scripts for macOS, Linux, and Windows (`scripts/install.sh`, `scripts/install.ps1`).
-- Docker install helper (`scripts/install-docker.sh`).
-- GoReleaser configuration and GitHub Actions release workflow for multi-platform binaries.
-- `incident-investigator version` command and centralized build metadata (`internal/version`).
-- CI workflow for tests on push and pull requests.
-- Claude Code plugin (`.claude-plugin/marketplace.json`, investigation skill, MCP config).
-- Codex plugin (`.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`).
-- Plugin bundle at `plugins/incident-investigator/` with MCP launcher script.
-
 ## [0.1.0] - 2026-06-28
 
 ### Added
@@ -39,6 +28,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Realistic incident fixtures and tests (bad deployment, database outage, certificate expiry, DNS outage, Kubernetes restart loop, memory leak, retry storm).
 - End-to-end MCP protocol test over an in-memory transport.
 - Docker image and `docker-compose` for running the MCP server.
+- Install scripts for macOS, Linux, and Windows (`scripts/install.sh`, `scripts/install.ps1`).
+- Docker install helper (`scripts/install-docker.sh`).
+- GoReleaser configuration and GitHub Actions release workflow for multi-platform binaries.
+- `incident-investigator version` command and centralized build metadata (`internal/version`).
+- CI workflow for tests on push and pull requests.
+- Claude Code plugin (`.claude-plugin/marketplace.json`, investigation skill, MCP config).
+- Codex plugin (`.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`).
+- Plugin bundle at `plugins/incident-investigator/` with MCP launcher script.
+
+### Fixed
+
+- Signal classification: rollbacks and recovery events no longer misclassified as deployments or incident onset.
+- Report root-cause candidates skip refuted hypotheses instead of truncating early.
+- Session lifecycle: reject evidence submission after finish, duplicate evidence IDs, and invalid time windows.
+- Atomic session updates via `WithSession` to prevent races between concurrent MCP calls.
+- MCP input validation and clearer tool errors for missing fields and bad evidence.
+- Plugin `.mcp.json` uses a relative launcher path for Codex compatibility.
+- Install script release version parsing and Windows arm64 detection in `install.ps1`.
 
 [Unreleased]: https://github.com/stackrail-io/Incident-Investigator/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/stackrail-io/Incident-Investigator/releases/tag/v0.1.0
