@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/stackrail/incident-investigator/internal/engine"
@@ -46,6 +47,20 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Confidence = 40
 			res.Reason = "Temporal ordering between deployment and symptoms is inconclusive."
 		}
+	case "deploy-after-incident":
+		if sig.DeployAfterIncident {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 90
+			res.Reason = "Deployment occurred after incident onset; deployment is unlikely to be root cause."
+		} else if sig.DeployBeforeIncident {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 85
+			res.Reason = "Deployment preceded symptoms; deploy-caused theories remain plausible."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 35
+			res.Reason = "Need deployment and symptom evidence to establish ordering."
+		}
 	case "rollback-restored-service":
 		if sig.Recovery != nil {
 			res.Status = model.ResolutionConfirmed
@@ -77,6 +92,24 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Confidence = 30
 			res.Reason = "Insufficient database evidence."
 		}
+	case "database-saturated":
+		if sig.Lock.Present || sig.Lock.HealthyDatabaseMetrics {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 84
+			res.Reason = "Database capacity appears healthy or lock contention is present."
+		} else if hasCategoryError(s, model.CategoryDatabaseEvents) || hasSaturationMetrics(s) {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 88
+			res.Reason = "Database events or metrics indicate saturation."
+		} else if s.HasCategory(model.CategoryDatabaseEvents) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 72
+			res.Reason = "Database events present without saturation signals."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need database events and metrics to assess saturation."
+		}
 	case "lock-contention-queue":
 		if sig.Lock.Present {
 			res.Status = model.ResolutionConfirmed
@@ -92,6 +125,20 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Status = model.ResolutionInsufficientEvidence
 			res.Confidence = 30
 			res.Reason = "Need database and trace evidence to assess lock contention."
+		}
+	case "lock-timeouts-missing":
+		if sig.Lock.MissingLockTimeouts {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 86
+			res.Reason = "Configuration lacks statement_timeout or lock_timeout."
+		} else if s.HasCategory(model.CategoryConfigurationChanges) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 70
+			res.Reason = "No missing lock-timeout configuration detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need configuration evidence to assess lock timeouts."
 		}
 	case "latency-before-retries":
 		if sig.Keywords["latency"] && sig.Keywords["retry"] {
@@ -132,6 +179,48 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Status = model.ResolutionInsufficientEvidence
 			res.Confidence = 30
 			res.Reason = "Need metrics to confirm traffic shift."
+		}
+	case "memory-pressure":
+		if sig.Keywords["memory"] || sig.Keywords["restart"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 86
+			res.Reason = "Memory pressure or restart signals present in evidence."
+		} else if s.HasCategory(model.CategoryInfrastructureEvents) || s.HasCategory(model.CategoryMetrics) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 72
+			res.Reason = "No memory pressure or OOM signals detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need metrics and infrastructure evidence to assess memory pressure."
+		}
+	case "dns-failure":
+		if sig.Keywords["dns"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 90
+			res.Reason = "DNS resolution failure symptoms detected."
+		} else if s.HasCategory(model.CategoryNetworkEvents) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 75
+			res.Reason = "Network events present without DNS failure signals."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need network evidence to assess DNS failures."
+		}
+	case "certificate-expired":
+		if sig.Keywords["cert"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 92
+			res.Reason = "TLS or certificate failure symptoms detected."
+		} else if s.HasCategory(model.CategorySecurityEvents) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 70
+			res.Reason = "Security events present without certificate expiry signals."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need security and log evidence to assess certificate health."
 		}
 	case "network-healthy":
 		if sig.Keywords["dns"] || sig.Keywords["network"] {
@@ -180,6 +269,23 @@ func hasCategoryError(s *model.Session, cat model.Category) bool {
 		text := strings.ToLower(e.Summary)
 		if strings.Contains(text, "saturat") || strings.Contains(text, "timeout") ||
 			strings.Contains(text, "error") || strings.Contains(text, "exhaust") {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSaturationMetrics(s *model.Session) bool {
+	for _, e := range s.Evidence {
+		if e.Category != model.CategoryMetrics {
+			continue
+		}
+		text := strings.ToLower(e.Summary + " " + e.Entity)
+		for _, k := range e.Payload {
+			text += " " + strings.ToLower(fmt.Sprint(k))
+		}
+		if strings.Contains(text, "saturat") || strings.Contains(text, "100/100") ||
+			strings.Contains(text, "exhaust") || strings.Contains(text, "cpu 9") {
 			return true
 		}
 	}
