@@ -57,6 +57,7 @@ type Archetype interface {
 	HypothesisID() string
 	Applicable(ctx ScoreContext) bool
 	Score(ctx ScoreContext) Candidate
+	SeedQuestions() []QuestionSeed
 	ExpectedEvidence() []model.Category
 	TypicalSubcauses() []string
 }

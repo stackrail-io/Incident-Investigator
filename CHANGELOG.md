@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Investigation archetype registry (Phase 1)** — `internal/archetype/` defines the `Archetype` interface and `Registry`; built-in failure modes live in `internal/archetype/builtin/`. `HeuristicHypothesisEngine` delegates scoring to the registry with no behavior change. Signal extraction moved to `internal/signals/` to support extensible archetypes without import cycles.
+- **Archetype-seeded root-cause playbook (Phase 2)** — root-cause investigation questions are contributed by each built-in archetype via `SeedQuestions()` and assembled by `Registry.SeedQuestions()`; the monolithic `rootCausePlaybook` DSL string is removed.
 - **Expanded root-cause playbook** — covers all failure archetypes (deployment ordering, database saturation vs lock contention, certificate expiry, DNS, memory pressure) with TITLE/DESCRIPTION/PRIORITY metadata and signal-triggered question chains.
 - **Investigation Specification v1** — formal protocol (`spec/investigation-v1/`): information model, lifecycle, operations, and extensions (graph, reasoning, intelligence).
 - **Semantic reasoner** uses the MCP host LLM (Claude, Codex) via MCP sampling during evidence recomputation when the client supports it.
