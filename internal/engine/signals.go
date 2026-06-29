@@ -50,6 +50,9 @@ type Signals struct {
 
 	// Entities is the set of distinct entities seen, with occurrence counts.
 	Entities map[string]int
+
+	// Lock holds row/table lock-contention signals from database_events.
+	Lock LockContention
 }
 
 func newSignals() Signals {
@@ -142,6 +145,8 @@ func Analyze(s *model.Session) Signals {
 			sig.DeployAfterIncident = true
 		}
 	}
+
+	sig.Lock = analyzeLockContention(ordered)
 
 	return sig
 }

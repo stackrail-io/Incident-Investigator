@@ -127,6 +127,8 @@ func categorySupportsHypothesis(cat model.Category, hypID string) bool {
 		return cat == model.CategoryDeploymentEvents || cat == model.CategoryConfigurationChanges
 	case "hypothesis-database-saturation":
 		return cat == model.CategoryDatabaseEvents || cat == model.CategoryMetrics
+	case "hypothesis-lock-contention":
+		return cat == model.CategoryDatabaseEvents || cat == model.CategoryTraceEvents || cat == model.CategoryConfigurationChanges
 	case "hypothesis-network-dns":
 		return cat == model.CategoryNetworkEvents
 	case "hypothesis-certificate-expiry":

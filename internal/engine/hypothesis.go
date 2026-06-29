@@ -38,6 +38,7 @@ func (h *HeuristicHypothesisEngine) Generate(s *model.Session, sig Signals, cont
 		h.deploymentCaused(s, sig, deployContradicted),
 		h.deploymentUnrelated(s, sig, deployContradicted),
 		h.databaseSaturation(s, sig),
+		h.lockContention(s, sig),
 		h.configurationChange(s, sig),
 		h.networkOrDNS(s, sig),
 		h.certificateExpiry(s, sig),
@@ -158,6 +159,59 @@ func (h *HeuristicHypothesisEngine) databaseSaturation(s *model.Session, sig Sig
 	}
 	if sig.Keywords["latency"] && s.HasCategory(model.CategoryMetrics) {
 		c.score += 8
+	}
+	if sig.Lock.Present {
+		c.score -= 25
+		if c.score < 0 {
+			c.score = 0
+		}
+		c.conflict = append(c.conflict, sig.Lock.WaiterIDs...)
+	}
+	if sig.Lock.HealthyDatabaseMetrics {
+		c.score -= 15
+		if c.score < 0 {
+			c.score = 0
+		}
+	}
+	return c
+}
+
+func (h *HeuristicHypothesisEngine) lockContention(s *model.Session, sig Signals) *candidate {
+	c := &candidate{
+		id:        "hypothesis-lock-contention",
+		statement: "Database lock contention on a hot row or table blocked concurrent writers.",
+	}
+	if !sig.Lock.Present {
+		return c
+	}
+	c.score += 35
+	c.rationale = "Multiple database statements on the same entity completed together, indicating a lock queue."
+	c.support = append(c.support, sig.Lock.HolderIDs...)
+	c.support = append(c.support, sig.Lock.WaiterIDs...)
+	if sig.Lock.SerializedRelease {
+		c.score += 20
+	}
+	if sig.Lock.MissingLockTimeouts {
+		c.score += 15
+		c.rationale += " Missing statement/lock timeouts allowed blocked writers to wait unbounded."
+		c.support = append(c.support, evidenceMatching(s, func(e *model.Evidence) bool {
+			return e.Category == model.CategoryConfigurationChanges && mentionsMissingTimeout(haystack(e))
+		})...)
+	}
+	if sig.Lock.HealthyDatabaseMetrics {
+		c.score += 12
+		c.support = append(c.support, evidenceMatching(s, func(e *model.Evidence) bool {
+			return e.Category == model.CategoryMetrics && looksLikeHealthyDatabaseMetrics(e)
+		})...)
+	}
+	if sig.Keywords["latency"] {
+		c.score += 8
+	}
+	if s.HasCategory(model.CategoryTraceEvents) {
+		c.score += 6
+		c.support = append(c.support, evidenceMatching(s, func(e *model.Evidence) bool {
+			return e.Category == model.CategoryTraceEvents
+		})...)
 	}
 	return c
 }

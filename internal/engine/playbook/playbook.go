@@ -166,6 +166,13 @@ REQUIRES database_events metrics application_logs
 IF TRUE Decrease hypothesis-database-saturation 30
 IF FALSE Increase hypothesis-database-saturation 35
 
+QUESTION lock-contention-queue
+Were database writes blocked on the same row?
+REQUIRES database_events trace_events
+IF TRUE Increase hypothesis-lock-contention 25
+IF FALSE Decrease hypothesis-lock-contention 20
+IF TRUE Decrease hypothesis-database-saturation 25
+
 QUESTION latency-before-retries
 Did latency begin before retries?
 REQUIRES metrics trace_events

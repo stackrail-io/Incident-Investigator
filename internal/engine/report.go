@@ -29,6 +29,10 @@ var recommendationsByHypothesis = map[string][]string{
 		"Investigate database capacity, slow queries and connection-pool limits.",
 		"Add circuit breakers and backpressure to protect the database.",
 	},
+	"hypothesis-lock-contention": {
+		"Identify the long-running transaction holding the lock and shorten or split it.",
+		"Set statement_timeout and lock_timeout on connection pools to fail fast instead of queuing unbounded.",
+	},
 	"hypothesis-configuration-change": {
 		"Audit the recent configuration/feature-flag change and revert if needed.",
 		"Add configuration validation and staged rollout in CI/CD.",

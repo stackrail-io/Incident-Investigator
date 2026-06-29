@@ -51,6 +51,7 @@ func All() []Fixture {
 		KubernetesRestartLoop(),
 		MemoryLeak(),
 		RetryStorm(),
+		LockContention(),
 	}
 }
 
@@ -226,6 +227,46 @@ func RetryStorm() Fixture {
 					"Alert: gateway p99 latency 30s", map[string]any{"api": "/v1"}),
 				ev("trace-1", at(3, 0), model.CategoryTraceEvents, "gateway",
 					"retries cascading to inventory-service", nil),
+			},
+		},
+	}
+}
+
+// LockContention: a long-held row lock blocks concurrent writers on the same
+// primary key; missing lock timeouts amplify wait time. Database capacity is
+// healthy — this is not saturation.
+func LockContention() Fixture {
+	release := at(10, 0)
+	return Fixture{
+		Name:          "lock_contention",
+		Question:      "Why did renameIdentityProvider writes spike to 66s p95?",
+		Service:       "auth-api",
+		Window:        model.TimeWindow{Start: at(0, 0), End: at(20, 0)},
+		ExpectLeading: "hypothesis-lock-contention",
+		Batches: [][]*model.Evidence{
+			{
+				ev("cfg-1", at(0, 0), model.CategoryConfigurationChanges, "auth-api",
+					"connection pool has no statement_timeout or lock_timeout configured", nil),
+			},
+			{
+				ev("alert-1", at(5, 0), model.CategoryAlertEvents, "auth-api",
+					"p95 latency 65.8s vs 30s threshold", map[string]any{"p95_ms": 65800}),
+				ev("metric-1", at(5, 30), model.CategoryMetrics, "postgres-primary",
+					"db connections 12/100, cpu 15%, reads fast", map[string]any{"connections": "12/100"}),
+			},
+			{
+				ev("trace-1", release, model.CategoryTraceEvents, "auth-api",
+					"write span 105.9s completed", map[string]any{"duration_ms": 105900}),
+				ev("trace-2", release, model.CategoryTraceEvents, "auth-api",
+					"write span 26.7s completed", map[string]any{"duration_ms": 26700}),
+				ev("db-del", release, model.CategoryDatabaseEvents, "identity_provider:pk-42",
+					"DELETE on primary key row held lock 222.9s", map[string]any{"rows_affected": 1, "duration_ms": 222900}),
+				ev("db-w1", release, model.CategoryDatabaseEvents, "identity_provider:pk-42",
+					"UPDATE queued behind lock", map[string]any{"rows_affected": 0, "duration_ms": 180000}),
+				ev("db-w2", release, model.CategoryDatabaseEvents, "identity_provider:pk-42",
+					"UPDATE queued behind lock", map[string]any{"rows_affected": 0, "duration_ms": 150000}),
+				ev("db-w3", release, model.CategoryDatabaseEvents, "identity_provider:pk-42",
+					"UPDATE queued behind lock", map[string]any{"rows_affected": 0, "duration_ms": 120000}),
 			},
 		},
 	}
