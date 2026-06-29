@@ -7,7 +7,9 @@
 # Test / smoke artifacts
 /.smoke/
 *.out
-coverage.*
+/coverage.out
+/coverage.html
+*.coverprofile
 
 # Editor / OS
 .DS_Store

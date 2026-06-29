@@ -4,7 +4,9 @@
 bin
 dist
 *.exe
-coverage.*
+/coverage.out
+/coverage.html
+*.coverprofile
 .DS_Store
 .idea
 .vscode
