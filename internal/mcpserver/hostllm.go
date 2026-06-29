@@ -40,8 +40,21 @@ func contentText(c mcp.Content) string {
 }
 
 func ctxWithHostLLM(ctx context.Context, req *mcp.CallToolRequest) context.Context {
-	if req == nil || req.Session == nil {
+	if req == nil || req.Session == nil || !clientSupportsSampling(req.Session.InitializeParams()) {
 		return ctx
 	}
 	return reasoning.WithHostLLMBackend(ctx, &samplingBackend{session: req.Session})
+}
+
+// clientSupportsSampling reports whether the client advertised the `sampling`
+// capability during initialization.
+//
+// Per the MCP specification a server must not issue sampling/createMessage
+// requests to a client that did not declare sampling support. Without this
+// guard the semantic reasoner would call back into a client that cannot answer,
+// blocking every reasoning tool call (e.g. submit_evidence) until the request
+// errors or the connection drops. When sampling is unavailable the backend is
+// left unattached and the semantic reasoner skips itself cleanly.
+func clientSupportsSampling(params *mcp.InitializeParams) bool {
+	return params != nil && params.Capabilities != nil && params.Capabilities.Sampling != nil
 }

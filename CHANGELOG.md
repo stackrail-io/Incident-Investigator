@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Investigation Specification v1** — formal protocol (`spec/investigation-v1/`): information model, lifecycle, operations, and extensions (graph, reasoning, intelligence).
 - **Semantic reasoner** uses the MCP host LLM (Claude, Codex) via MCP sampling during evidence recomputation when the client supports it.
 
+### Fixed
+
+- Only attach the host-LLM sampling backend when the client advertised the `sampling` capability during initialization. Previously every reasoning tool call (e.g. `submit_evidence`) issued a `sampling/createMessage` request to clients that never declared sampling support, blocking the call until it errored or the connection dropped. The semantic reasoner now skips cleanly when sampling is unavailable.
+
 ## [1.0.0] - 2026-06-28
 
 ### Added
