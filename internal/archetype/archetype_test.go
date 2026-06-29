@@ -11,10 +11,10 @@ import (
 	"github.com/stackrail/incident-investigator/internal/model"
 )
 
-func TestDefaultRegistryHasTenArchetypes(t *testing.T) {
+func TestDefaultRegistryHasSixteenArchetypes(t *testing.T) {
 	reg := builtin.DefaultRegistry()
-	if got := len(reg.All()); got != 10 {
-		t.Fatalf("got %d archetypes, want 10", got)
+	if got := len(reg.All()); got != 17 {
+		t.Fatalf("got %d archetypes, want 17", got)
 	}
 	if reg.ByID("deployment-failure") == nil {
 		t.Fatal("expected deployment-failure archetype")
@@ -27,8 +27,8 @@ func TestDefaultRegistryHasTenArchetypes(t *testing.T) {
 func TestRegistrySeedQuestions(t *testing.T) {
 	reg := builtin.DefaultRegistry()
 	seeds := reg.SeedQuestions()
-	if len(seeds) < 15 {
-		t.Fatalf("got %d seeded questions, want at least 15", len(seeds))
+	if len(seeds) < 22 {
+		t.Fatalf("got %d seeded questions, want at least 22", len(seeds))
 	}
 	ids := map[string]bool{}
 	for _, q := range seeds {
@@ -37,7 +37,7 @@ func TestRegistrySeedQuestions(t *testing.T) {
 		}
 		ids[q.ID] = true
 	}
-	for _, want := range []string{"deploy-before-errors", "lock-contention-queue", "certificate-expired"} {
+	for _, want := range []string{"deploy-before-errors", "lock-contention-queue", "certificate-expired", "dependency-unavailable", "vendor-outage"} {
 		if !ids[want] {
 			t.Errorf("missing seeded question %q", want)
 		}

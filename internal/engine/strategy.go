@@ -137,6 +137,20 @@ func categorySupportsHypothesis(cat model.Category, hypID string) bool {
 		return cat == model.CategoryInfrastructureEvents || cat == model.CategoryMetrics
 	case "hypothesis-retry-storm":
 		return cat == model.CategoryMetrics || cat == model.CategoryTraceEvents
+	case "hypothesis-dependency-failure":
+		return cat == model.CategoryTraceEvents || cat == model.CategoryApplicationLogs
+	case "hypothesis-performance-regression":
+		return cat == model.CategoryMetrics || cat == model.CategoryTraceEvents
+	case "hypothesis-external-outage":
+		return cat == model.CategoryNetworkEvents || cat == model.CategoryApplicationLogs
+	case "hypothesis-auth-failure":
+		return cat == model.CategorySecurityEvents || cat == model.CategoryApplicationLogs
+	case "hypothesis-human-error":
+		return cat == model.CategoryHumanContext || cat == model.CategoryConfigurationChanges
+	case "hypothesis-capacity-planning":
+		return cat == model.CategoryMetrics || cat == model.CategoryInfrastructureEvents
+	case "hypothesis-security-incident":
+		return cat == model.CategorySecurityEvents || cat == model.CategoryHumanContext
 	default:
 		return false
 	}

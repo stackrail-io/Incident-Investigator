@@ -272,5 +272,23 @@ func DefaultPatternLibrary() []model.InvestigationPattern {
 			},
 			TypicalRootCause: "hypothesis-retry-storm",
 		},
+		{
+			ID: "pattern-dependency-failure", Name: "Dependency Failure Pattern",
+			Description: "Downstream dependency timeouts and errors cascade to callers.",
+			Trigger: model.GraphPattern{Sequence: []string{"dependency", "timeout", "error"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryApplicationLogs, model.CategoryTraceEvents, model.CategoryAlertEvents,
+			},
+			TypicalRootCause: "hypothesis-dependency-failure",
+		},
+		{
+			ID: "pattern-external-outage", Name: "External Outage Pattern",
+			Description: "Third-party or vendor outages cause internal API failures.",
+			Trigger: model.GraphPattern{Sequence: []string{"external", "vendor", "outage"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryApplicationLogs, model.CategoryNetworkEvents,
+			},
+			TypicalRootCause: "hypothesis-external-outage",
+		},
 	}
 }
