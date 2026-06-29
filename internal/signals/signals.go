@@ -24,6 +24,13 @@ var Keywords = map[string][]string{
 	"restart":    {"restart", "crashloop", "crashloopbackoff", "oomkilled", "killed", "evicted", "reboot"},
 	"latency":    {"latency", "slow", "p99", "p95", "timeout", "timed out", "degraded"},
 	"error":      {"error", "errors", "500", "503", "502", "5xx", "exception", "failed", "failure", "panic"},
+	"dependency": {"downstream", "upstream", "dependency", "depends on", "caller timeout", "service unavailable"},
+	"external":   {"third-party", "third party", "vendor", "saas", "external service", "status page", "provider outage"},
+	"auth":       {"oauth", "jwt", "iam", "ldap", "rbac", "unauthorized", "401", "403", "token expired", "authentication failed"},
+	"human":      {"manual", "operator", "runbook", "human error", "mistake", "wrong command", "manual change"},
+	"capacity":   {"autoscaling", "auto-scaling", "traffic spike", "quota exceeded", "scaling delayed", "throttl"},
+	"security":   {"unauthorized access", "breach", "compromise", "exploit", "intrusion", "credential leak"},
+	"performance": {"regression", "latency regression", "slower than baseline", "performance degraded"},
 }
 
 // LockContention captures vendor-neutral signals of row/table lock waiting.

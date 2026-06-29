@@ -52,6 +52,8 @@ func All() []Fixture {
 		MemoryLeak(),
 		RetryStorm(),
 		LockContention(),
+		DependencyFailure(),
+		ExternalOutage(),
 	}
 }
 
@@ -218,7 +220,7 @@ func RetryStorm() Fixture {
 		Batches: [][]*model.Evidence{
 			{
 				ev("log-1", at(0, 0), model.CategoryApplicationLogs, "gateway",
-					"downstream timeout; retrying with backoff", nil),
+					"request timeout; retrying with backoff", nil),
 			},
 			{
 				ev("metric-1", at(1, 0), model.CategoryMetrics, "gateway",
@@ -267,6 +269,52 @@ func LockContention() Fixture {
 					"UPDATE queued behind lock", map[string]any{"rows_affected": 0, "duration_ms": 150000}),
 				ev("db-w3", release, model.CategoryDatabaseEvents, "identity_provider:pk-42",
 					"UPDATE queued behind lock", map[string]any{"rows_affected": 0, "duration_ms": 120000}),
+			},
+		},
+	}
+}
+
+// DependencyFailure: a downstream inventory service times out and degrades the gateway.
+func DependencyFailure() Fixture {
+	return Fixture{
+		Name:          "dependency_failure",
+		Question:      "Why is checkout failing with 503 errors?",
+		Service:       "checkout-api",
+		Window:        model.TimeWindow{Start: at(0, 0), End: at(15, 0)},
+		ExpectLeading: "hypothesis-dependency-failure",
+		Batches: [][]*model.Evidence{
+			{
+				ev("log-1", at(1, 0), model.CategoryApplicationLogs, "checkout-api",
+					"downstream dependency inventory-service timeout", nil),
+			},
+			{
+				ev("trace-1", at(2, 0), model.CategoryTraceEvents, "checkout-api",
+					"caller timeout waiting on inventory-service dependency", nil),
+				ev("alert-1", at(3, 0), model.CategoryAlertEvents, "checkout-api",
+					"Alert: checkout-api 503 errors", map[string]any{"api": "/checkout"}),
+			},
+		},
+	}
+}
+
+// ExternalOutage: a third-party payment provider outage causes internal failures.
+func ExternalOutage() Fixture {
+	return Fixture{
+		Name:          "external_outage",
+		Question:      "Why are payments failing across all regions?",
+		Service:       "payments-api",
+		Window:        model.TimeWindow{Start: at(0, 0), End: at(20, 0)},
+		ExpectLeading: "hypothesis-external-outage",
+		Batches: [][]*model.Evidence{
+			{
+				ev("log-1", at(0, 0), model.CategoryApplicationLogs, "payments-api",
+					"third-party payment provider outage; external service unavailable", nil),
+			},
+			{
+				ev("net-1", at(1, 0), model.CategoryNetworkEvents, "payments-api",
+					"vendor status page reports provider outage in us-east-1", nil),
+				ev("alert-1", at(2, 0), model.CategoryAlertEvents, "payments-api",
+					"Alert: payment API failures 100%", nil),
 			},
 		},
 	}

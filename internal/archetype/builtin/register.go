@@ -14,6 +14,13 @@ func DefaultRegistry() *archetype.Registry {
 		CertificateExpiry{},
 		ResourceExhaustion{},
 		RetryStorm{},
+		DependencyFailure{},
+		PerformanceRegression{},
+		ExternalOutage{},
+		AuthFailure{},
+		HumanError{},
+		CapacityPlanning{},
+		SecurityIncident{},
 		Unknown{},
 	)
 }

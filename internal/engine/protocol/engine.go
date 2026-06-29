@@ -386,6 +386,20 @@ func signalTriggered(sig engine.Signals, trigger string) bool {
 		return sig.Keywords["dns"] || sig.Categories[model.CategoryNetworkEvents] > 0
 	case "memory":
 		return sig.Keywords["memory"] || sig.Keywords["restart"]
+	case "dependency":
+		return sig.Keywords["dependency"] || sig.Categories[model.CategoryTraceEvents] > 0
+	case "external":
+		return sig.Keywords["external"]
+	case "auth":
+		return sig.Keywords["auth"] || sig.Categories[model.CategorySecurityEvents] > 0
+	case "human":
+		return sig.Keywords["human"] || sig.Categories[model.CategoryHumanContext] > 0
+	case "capacity":
+		return sig.Keywords["capacity"] || sig.Categories[model.CategoryMetrics] > 0
+	case "security":
+		return sig.Keywords["security"]
+	case "performance":
+		return sig.Keywords["performance"] || sig.Keywords["latency"]
 	default:
 		return false
 	}

@@ -236,6 +236,84 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Confidence = 35
 			res.Reason = "Need network events to confirm."
 		}
+	case "dependency-unavailable":
+		if sig.Keywords["dependency"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 88
+			res.Reason = "Downstream dependency failure symptoms detected."
+		} else if s.HasCategory(model.CategoryTraceEvents) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 72
+			res.Reason = "Trace evidence present without dependency failure signals."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need logs and traces to assess dependency health."
+		}
+	case "latency-regression":
+		if sig.Keywords["performance"] || (sig.Keywords["latency"] && !sig.Keywords["database"] && !sig.Keywords["retry"]) {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 82
+			res.Reason = "Performance regression symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 35
+			res.Reason = "Need metrics and traces to confirm a regression."
+		}
+	case "vendor-outage":
+		if sig.Keywords["external"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 90
+			res.Reason = "Third-party or vendor outage symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need external provider evidence."
+		}
+	case "auth-failure":
+		if sig.Keywords["auth"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 89
+			res.Reason = "Authentication or authorization failure detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need security and log evidence for auth failures."
+		}
+	case "manual-change":
+		if sig.Keywords["human"] || s.HasCategory(model.CategoryHumanContext) {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 87
+			res.Reason = "Human or operational error evidence present."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need human context evidence."
+		}
+	case "capacity-exceeded":
+		if sig.Keywords["capacity"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 85
+			res.Reason = "Capacity or autoscaling stress detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need metrics and infrastructure evidence."
+		}
+	case "security-breach":
+		if sig.Keywords["security"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 91
+			res.Reason = "Security incident symptoms detected."
+		} else if s.HasCategory(model.CategorySecurityEvents) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 70
+			res.Reason = "Security events without breach indicators."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need security event evidence."
+		}
 	default:
 		res.Status = model.ResolutionConfirmed
 		res.Confidence = 70

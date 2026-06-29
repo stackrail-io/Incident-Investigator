@@ -53,6 +53,34 @@ var recommendationsByHypothesis = map[string][]string{
 		"Introduce retry budgets, jittered backoff and circuit breakers.",
 		"Add load-shedding to prevent cascading amplification.",
 	},
+	"hypothesis-dependency-failure": {
+		"Verify downstream dependency health and add circuit breakers with fallbacks.",
+		"Add synthetic checks and SLOs for critical dependencies.",
+	},
+	"hypothesis-performance-regression": {
+		"Profile the degraded endpoint and compare against the last known-good release.",
+		"Add performance regression tests in CI for hot paths.",
+	},
+	"hypothesis-external-outage": {
+		"Confirm vendor status and engage provider support; enable graceful degradation.",
+		"Add multi-vendor or multi-region failover where feasible.",
+	},
+	"hypothesis-auth-failure": {
+		"Verify identity-provider health, token expiry, and recent IAM/RBAC changes.",
+		"Add auth-failure alerting and automated token rotation.",
+	},
+	"hypothesis-human-error": {
+		"Document the manual change and add guardrails (approval gates, dry-run).",
+		"Update runbooks and add blast-radius checks for operational commands.",
+	},
+	"hypothesis-capacity-planning": {
+		"Review autoscaling policies, quotas, and traffic forecasts.",
+		"Load-test ahead of expected spikes and pre-warm capacity.",
+	},
+	"hypothesis-security-incident": {
+		"Contain compromised credentials and rotate secrets immediately.",
+		"Engage security team for forensics and audit access logs.",
+	},
 }
 
 // Generate implements ReportGenerator.
