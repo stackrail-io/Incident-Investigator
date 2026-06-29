@@ -169,3 +169,83 @@ func TestPlaybookEffectsAdjustHypotheses(t *testing.T) {
 		}
 	}
 }
+
+func TestDynamicDatabaseQuestions(t *testing.T) {
+	base := time.Date(2026, 6, 27, 9, 0, 0, 0, time.UTC)
+	s := testSession()
+	s.Evidence = []*model.Evidence{
+		{ID: "db-1", Timestamp: base, Category: model.CategoryDatabaseEvents, Entity: "postgres", Summary: "query timeout on orders"},
+		{ID: "m-1", Timestamp: base, Category: model.CategoryMetrics, Entity: "postgres", Summary: "db connections saturated"},
+		{ID: "l-1", Timestamp: base, Category: model.CategoryApplicationLogs, Entity: "orders-api", Summary: "database query timeout"},
+	}
+
+	pe, _ := protocol.NewEngine(s.Goal)
+	pe.Run(s, engine.Analyze(s), time.Now(), 0)
+
+	found := map[string]bool{}
+	for _, q := range s.Plan.Questions {
+		found[q.ID] = true
+	}
+	for _, id := range []string{"database-healthy", "lock-contention-queue"} {
+		if !found[id] {
+			t.Errorf("expected dynamic question %q after database evidence", id)
+		}
+	}
+}
+
+func TestCertificateQuestionTriggered(t *testing.T) {
+	base := time.Date(2026, 6, 27, 9, 0, 0, 0, time.UTC)
+	s := testSession()
+	s.Evidence = []*model.Evidence{
+		{ID: "sec-1", Timestamp: base, Category: model.CategorySecurityEvents, Summary: "TLS certificate expired"},
+		{ID: "log-1", Timestamp: base, Category: model.CategoryApplicationLogs, Summary: "x509 certificate has expired"},
+	}
+
+	pe, _ := protocol.NewEngine(s.Goal)
+	pe.Run(s, engine.Analyze(s), time.Now(), 0)
+
+	found := false
+	for _, q := range s.Plan.Questions {
+		if q.ID == "certificate-expired" {
+			found = true
+			if q.Status != model.QuestionAnswered {
+				t.Errorf("certificate-expired status = %q, want answered", q.Status)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected certificate-expired question")
+	}
+}
+
+func TestLockTimeoutQuestionDependsOnQueue(t *testing.T) {
+	release := time.Date(2026, 6, 27, 9, 10, 0, 0, time.UTC)
+	s := testSession()
+	s.Evidence = []*model.Evidence{
+		{ID: "cfg-1", Timestamp: release.Add(-10 * time.Minute), Category: model.CategoryConfigurationChanges, Summary: "no lock_timeout configured"},
+		{ID: "db-h", Timestamp: release, Category: model.CategoryDatabaseEvents, Entity: "row:1", Summary: "DELETE held lock", Payload: map[string]any{"rows_affected": 1}},
+		{ID: "db-w", Timestamp: release, Category: model.CategoryDatabaseEvents, Entity: "row:1", Summary: "UPDATE queued", Payload: map[string]any{"rows_affected": 0}},
+		{ID: "tr-1", Timestamp: release, Category: model.CategoryTraceEvents, Summary: "write span slow"},
+		{ID: "m-1", Timestamp: release, Category: model.CategoryMetrics, Entity: "postgres", Summary: "db connections 12/100, cpu 15%"},
+		{ID: "l-1", Timestamp: release, Category: model.CategoryApplicationLogs, Summary: "database query timeout"},
+	}
+
+	pe, _ := protocol.NewEngine(s.Goal)
+	pe.Run(s, engine.Analyze(s), time.Now(), 0)
+
+	foundQueue, foundTimeouts := false, false
+	for _, q := range s.Plan.Questions {
+		switch q.ID {
+		case "lock-contention-queue":
+			foundQueue = true
+		case "lock-timeouts-missing":
+			foundTimeouts = true
+		}
+	}
+	if !foundQueue {
+		t.Fatal("expected lock-contention-queue")
+	}
+	if !foundTimeouts {
+		t.Fatal("expected lock-timeouts-missing after lock-contention-queue resolved")
+	}
+}

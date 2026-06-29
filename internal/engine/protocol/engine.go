@@ -378,6 +378,14 @@ func signalTriggered(sig engine.Signals, trigger string) bool {
 		return sig.Keywords["restart"] || sig.Keywords["memory"]
 	case "deploy_detected":
 		return sig.FirstDeployment != nil
+	case "database":
+		return sig.Keywords["database"] || sig.Categories[model.CategoryDatabaseEvents] > 0
+	case "cert":
+		return sig.Keywords["cert"] || sig.Categories[model.CategorySecurityEvents] > 0
+	case "dns":
+		return sig.Keywords["dns"] || sig.Categories[model.CategoryNetworkEvents] > 0
+	case "memory":
+		return sig.Keywords["memory"] || sig.Keywords["restart"]
 	default:
 		return false
 	}
