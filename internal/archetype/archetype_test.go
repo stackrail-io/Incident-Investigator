@@ -24,6 +24,26 @@ func TestDefaultRegistryHasTenArchetypes(t *testing.T) {
 	}
 }
 
+func TestRegistrySeedQuestions(t *testing.T) {
+	reg := builtin.DefaultRegistry()
+	seeds := reg.SeedQuestions()
+	if len(seeds) < 15 {
+		t.Fatalf("got %d seeded questions, want at least 15", len(seeds))
+	}
+	ids := map[string]bool{}
+	for _, q := range seeds {
+		if ids[q.ID] {
+			t.Errorf("duplicate question id %q", q.ID)
+		}
+		ids[q.ID] = true
+	}
+	for _, want := range []string{"deploy-before-errors", "lock-contention-queue", "certificate-expired"} {
+		if !ids[want] {
+			t.Errorf("missing seeded question %q", want)
+		}
+	}
+}
+
 func TestRegistryScoreMatchesHypothesisEngine(t *testing.T) {
 	for _, fx := range fixtures.All() {
 		fx := fx
@@ -75,6 +95,7 @@ func (customProbe) Score(archetype.ScoreContext) archetype.Candidate {
 		Score:        50,
 	}
 }
+func (customProbe) SeedQuestions() []archetype.QuestionSeed { return nil }
 
 func TestCustomArchetypeRegistration(t *testing.T) {
 	reg := builtin.DefaultRegistry()

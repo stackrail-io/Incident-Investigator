@@ -56,6 +56,22 @@ func (r *Registry) Score(ctx ScoreContext) []model.Hypothesis {
 	return candidatesToHypotheses(cands)
 }
 
+// SeedQuestions merges question seeds from every registered archetype, deduped by id.
+func (r *Registry) SeedQuestions() []QuestionSeed {
+	seen := map[string]bool{}
+	var out []QuestionSeed
+	for _, a := range r.order {
+		for _, q := range a.SeedQuestions() {
+			if seen[q.ID] {
+				continue
+			}
+			seen[q.ID] = true
+			out = append(out, q)
+		}
+	}
+	return out
+}
+
 func candidatesToHypotheses(cands []Candidate) []model.Hypothesis {
 	kept := cands[:0]
 	for _, c := range cands {
