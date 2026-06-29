@@ -60,7 +60,11 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Reason = "No recovery evidence submitted yet."
 		}
 	case "database-healthy":
-		if sig.Keywords["database"] && hasCategoryError(s, model.CategoryDatabaseEvents) {
+		if sig.Lock.Present {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 85
+			res.Reason = "Database capacity appears healthy; lock contention rather than saturation."
+		} else if sig.Keywords["database"] && hasCategoryError(s, model.CategoryDatabaseEvents) {
 			res.Status = model.ResolutionRejected
 			res.Confidence = 87
 			res.Reason = "Database events indicate saturation or errors."
@@ -72,6 +76,22 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Status = model.ResolutionInsufficientEvidence
 			res.Confidence = 30
 			res.Reason = "Insufficient database evidence."
+		}
+	case "lock-contention-queue":
+		if sig.Lock.Present {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 90
+			res.Reason = "Multiple database statements on the same entity completed together, indicating a lock queue."
+			res.SupportingEvidence = append(res.SupportingEvidence, sig.Lock.HolderIDs...)
+			res.SupportingEvidence = append(res.SupportingEvidence, sig.Lock.WaiterIDs...)
+		} else if s.HasCategory(model.CategoryDatabaseEvents) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 75
+			res.Reason = "Database events present but no lock-queue signature detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need database and trace evidence to assess lock contention."
 		}
 	case "latency-before-retries":
 		if sig.Keywords["latency"] && sig.Keywords["retry"] {

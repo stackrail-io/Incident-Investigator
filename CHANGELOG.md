@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`hypothesis-lock-contention` archetype** — scores row/table lock-wait signals (`database_events` on the same entity with `rows_affected` holder/waiter pattern, serialized release timestamps, missing lock timeouts, healthy DB metrics). New `lock_contention` fixture; intelligence pattern `pattern-lock-contention`.
 - **Investigation Specification v1** — formal protocol (`spec/investigation-v1/`): information model, lifecycle, operations, and extensions (graph, reasoning, intelligence).
 - **Semantic reasoner** uses the MCP host LLM (Claude, Codex) via MCP sampling during evidence recomputation when the client supports it.
 

@@ -246,6 +246,22 @@ func DefaultPatternLibrary() []model.InvestigationPattern {
 			TypicalRootCause: "hypothesis-database-saturation",
 		},
 		{
+			ID: "pattern-lock-contention", Name: "Lock Contention Pattern",
+			Description: "Row or table lock contention causes serialized writes, long wait queues, and latency spikes while database capacity remains healthy.",
+			Trigger: model.GraphPattern{
+				Sequence: []string{"database", "lock", "latency"},
+			},
+			RecommendedQuestions: []model.QuestionTemplate{
+				{Text: "Were multiple statements blocked on the same row?", Categories: []model.Category{model.CategoryDatabaseEvents, model.CategoryTraceEvents}},
+				{Text: "Are lock timeouts configured?", Categories: []model.Category{model.CategoryConfigurationChanges}},
+			},
+			ExpectedEvidence: []model.Category{
+				model.CategoryDatabaseEvents, model.CategoryTraceEvents,
+				model.CategoryConfigurationChanges, model.CategoryMetrics,
+			},
+			TypicalRootCause: "hypothesis-lock-contention",
+		},
+		{
 			ID: "pattern-retry-storm", Name: "Retry Storm Pattern",
 			Description: "Retry amplification causes cascading latency and error spikes across services.",
 			Trigger: model.GraphPattern{
