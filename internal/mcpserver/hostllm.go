@@ -39,8 +39,14 @@ func contentText(c mcp.Content) string {
 	}
 }
 
-func ctxWithHostLLM(ctx context.Context, req *mcp.CallToolRequest) context.Context {
-	if req == nil || req.Session == nil || !clientSupportsSampling(req.Session.InitializeParams()) {
+func (s *Server) ctxWithHostLLM(ctx context.Context, req *mcp.CallToolRequest) context.Context {
+	if req == nil || req.Session == nil {
+		return ctx
+	}
+	if !clientSupportsSampling(req.Session.InitializeParams()) {
+		if s.log != nil {
+			s.log.Debug("semantic reasoner skipped: client did not advertise sampling capability")
+		}
 		return ctx
 	}
 	return reasoning.WithHostLLMBackend(ctx, &samplingBackend{session: req.Session})
