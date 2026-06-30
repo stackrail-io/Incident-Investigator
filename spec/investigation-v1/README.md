@@ -29,6 +29,7 @@ Its MCP tools are one **binding** of the protocol — not the protocol itself.
 | [lifecycle.yaml](./lifecycle.yaml) | Canonical state machine and stage annotations |
 | [operations.yaml](./operations.yaml) | Protocol operations (Start, SubmitEvidence, Finish, …) |
 | [categories.yaml](./categories.yaml) | Normative evidence categories and priorities |
+| [archetypes.yaml](./archetypes.yaml) | Normative failure-mode archetype library and conformance fixtures |
 | [extensions/graph-v1.yaml](./extensions/graph-v1.yaml) | Investigation graph node/edge types and queries |
 | [extensions/reasoning-v1.yaml](./extensions/reasoning-v1.yaml) | Reasoning actions, cycles, reasoner interface |
 | [extensions/intelligence-v1.yaml](./extensions/intelligence-v1.yaml) | Historical learning API (similarity, patterns, calibration) |

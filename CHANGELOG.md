@@ -9,12 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Full 30-category archetype library** — 32 built-in archetypes (30 taxonomy items plus `deployment-unrelated` and a database lock-contention split) in `internal/archetype/builtin/`.
+- **Archetype spec contract** — `spec/investigation-v1/archetypes.yaml` declares every archetype (id, domain, hypothesis_id, signal triggers, expected evidence) and links to a portable YAML conformance fixture per archetype under `spec/investigation-v1/conformance/archetype-fixtures/`.
+- **Archetype scoring depth** — `scoreWith` helper in `internal/archetype/builtin/scorer.go` adds boosts, penalties, and skip rules for remaining archetypes; collision unit tests guard network/DNS, load-balancer/network, dependency/external, config/feature-flag, and retry/performance pairs.
+- **Archetype conformance tests** — `TestArchetypesYAMLMatchesBuiltinRegistry` and `TestArchetypeConformanceFixtures` validate registry ↔ spec parity and end-to-end leading-hypothesis behavior for all 32 archetypes. Fixtures assert leadership **by confidence** with optional `min_lead_margin` and `must_not_lead` guards against near-tie misclassification.
+- **Unified fixture loading** — `internal/fixtures` loads scenarios from `archetypes.yaml` conformance fixtures; `fixtures.All()` returns all 32 archetype scenarios from a single source of truth.
 - **Investigation archetype registry (Phase 1)** — `internal/archetype/` defines the `Archetype` interface and `Registry`; built-in failure modes live in `internal/archetype/builtin/`. `HeuristicHypothesisEngine` delegates scoring to the registry with no behavior change. Signal extraction moved to `internal/signals/` to support extensible archetypes without import cycles.
 - **Archetype-seeded root-cause playbook (Phase 2)** — root-cause investigation questions are contributed by each built-in archetype via `SeedQuestions()` and assembled by `Registry.SeedQuestions()`; the monolithic `rootCausePlaybook` DSL string is removed.
 - **Expanded archetype library (Phase 3)** — six new built-in archetypes: dependency failure, performance regression, external outage, auth failure, human error, capacity planning, and security incident; fixtures for dependency and external outage scenarios.
 - **Expanded root-cause playbook** — covers all failure archetypes (deployment ordering, database saturation vs lock contention, certificate expiry, DNS, memory pressure) with TITLE/DESCRIPTION/PRIORITY metadata and signal-triggered question chains.
 - **Investigation Specification v1** — formal protocol (`spec/investigation-v1/`): information model, lifecycle, operations, and extensions (graph, reasoning, intelligence).
 - **Semantic reasoner** uses the MCP host LLM (Claude, Codex) via MCP sampling during evidence recomputation when the client supports it.
+
+### Changed
+
+- **Network/DNS hypothesis split** — `hypothesis-network-dns` is replaced by `hypothesis-network-failure` (routing, packet loss) and `hypothesis-dns-failure` (name resolution). See README migration table.
+- **Confidence dilution** — with 32 competing archetypes, normalized hypothesis confidence is lower than the original 10-archetype library; conformance tests assert leading hypothesis **by confidence** (not slice order), with per-fixture `min_lead_margin` and `must_not_lead` where archetypes compete closely.
+- **Conformance fixture format** — archetype scenarios are YAML (`conformance/archetype-fixtures/*.yaml`), aligned with other spec documents. The legacy `conformance/fixtures/bad-deployment.json` is removed; use `deployment-failure.yaml` instead.
+- **Configuration vs Kubernetes fixtures** — `configuration-drift.yaml` uses config-change evidence only; `kubernetes-failure.yaml` covers scheduling/readiness faults. `fixtures.KubernetesRestartLoop()` is deprecated in favor of `ConfigurationDrift()` and `KubernetesFailure()`.
+- **Intelligence pattern library** — expanded to 18 built-in patterns covering infrastructure, Kubernetes, messaging, cache, storage, load balancer, feature flags, regional failure, API contract, and performance regression archetypes.
+- **Archetype package layout** — `internal/archetype/builtin/` reorganized by domain (`application.go`, `platform.go`, `infrastructure.go`, `data.go`, `operations.go`, `external.go`, `security.go`, `generic.go`); removed `remaining.go` / `extended.go` split.
 
 ### Fixed
 

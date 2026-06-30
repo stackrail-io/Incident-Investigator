@@ -400,6 +400,34 @@ func signalTriggered(sig engine.Signals, trigger string) bool {
 		return sig.Keywords["security"]
 	case "performance":
 		return sig.Keywords["performance"] || sig.Keywords["latency"]
+	case "infrastructure":
+		return sig.Keywords["infrastructure"] || sig.Categories[model.CategoryInfrastructureEvents] > 0
+	case "kubernetes":
+		return sig.Keywords["kubernetes"] || sig.Keywords["restart"]
+	case "container":
+		return sig.Keywords["container"]
+	case "storage":
+		return sig.Keywords["storage"] || sig.Categories[model.CategoryInfrastructureEvents] > 0
+	case "cache":
+		return sig.Keywords["cache"]
+	case "messaging":
+		return sig.Keywords["messaging"]
+	case "loadbalancer":
+		return sig.Keywords["loadbalancer"] || sig.Categories[model.CategoryNetworkEvents] > 0
+	case "apicontract":
+		return sig.Keywords["apicontract"]
+	case "datacorruption":
+		return sig.Keywords["datacorruption"]
+	case "clock":
+		return sig.Keywords["clock"]
+	case "featureflag":
+		return sig.Keywords["featureflag"] || sig.Categories[model.CategoryConfigurationChanges] > 0
+	case "regional":
+		return sig.Keywords["regional"]
+	case "dr":
+		return sig.Keywords["dr"]
+	case "observability":
+		return sig.Keywords["observability"]
 	default:
 		return false
 	}

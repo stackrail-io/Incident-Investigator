@@ -1,0 +1,87 @@
+archetype_id: database-lock-contention
+scenario_id: SC-ARCH-006
+tier: core
+description: Row lock queue with healthy database metrics.
+start:
+    question: Why did renameIdentityProvider writes spike to 66s p95?
+    service: auth-api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: cfg-1
+        timestamp: "2026-06-27T09:00:00Z"
+        category: configuration_changes
+        entity: auth-api
+        summary: connection pool has no statement_timeout or lock_timeout configured
+    - - id: alert-1
+        timestamp: "2026-06-27T09:05:00Z"
+        category: alert_events
+        entity: auth-api
+        summary: p95 latency 65.8s vs 30s threshold
+    - - id: metric-1
+        timestamp: "2026-06-27T09:05:30Z"
+        category: metrics
+        entity: postgres-primary
+        summary: db connections 12/100, cpu 15%, reads fast
+    - - id: trace-1
+        timestamp: "2026-06-27T09:10:00Z"
+        category: trace_events
+        entity: auth-api
+        summary: write span 105.9s completed
+      - id: trace-2
+        timestamp: "2026-06-27T09:10:00Z"
+        category: trace_events
+        entity: auth-api
+        summary: write span 26.7s completed
+      - id: db-del
+        timestamp: "2026-06-27T09:10:00Z"
+        category: database_events
+        entity: identity_provider:pk-42
+        summary: DELETE on primary key row held lock 222.9s
+        payload:
+            duration_ms: 222900
+            rows_affected: 1
+      - id: db-w1
+        timestamp: "2026-06-27T09:10:00Z"
+        category: database_events
+        entity: identity_provider:pk-42
+        summary: UPDATE queued behind lock
+        payload:
+            duration_ms: 180000
+            rows_affected: 0
+      - id: db-w2
+        timestamp: "2026-06-27T09:10:00Z"
+        category: database_events
+        entity: identity_provider:pk-42
+        summary: UPDATE queued behind lock
+        payload:
+            duration_ms: 150000
+            rows_affected: 0
+      - id: db-w3
+        timestamp: "2026-06-27T09:10:00Z"
+        category: database_events
+        entity: identity_provider:pk-42
+        summary: UPDATE queued behind lock
+        payload:
+            duration_ms: 120000
+            rows_affected: 0
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-lock-contention
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

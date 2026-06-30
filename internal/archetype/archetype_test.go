@@ -9,12 +9,22 @@ import (
 	"github.com/stackrail/incident-investigator/internal/engine"
 	"github.com/stackrail/incident-investigator/internal/fixtures"
 	"github.com/stackrail/incident-investigator/internal/model"
+	"github.com/stackrail/incident-investigator/internal/spec"
 )
 
-func TestDefaultRegistryHasSixteenArchetypes(t *testing.T) {
+func TestDefaultRegistryMatchesArchetypeSpec(t *testing.T) {
+	root, err := fixtures.RepoRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc, err := spec.LoadArchetypes(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	reg := builtin.DefaultRegistry()
-	if got := len(reg.All()); got != 17 {
-		t.Fatalf("got %d archetypes, want 17", got)
+	if got := len(reg.All()); got != len(doc.Archetypes) {
+		t.Fatalf("archetype count: registry=%d spec=%d", got, len(doc.Archetypes))
 	}
 	if reg.ByID("deployment-failure") == nil {
 		t.Fatal("expected deployment-failure archetype")
@@ -27,9 +37,15 @@ func TestDefaultRegistryHasSixteenArchetypes(t *testing.T) {
 func TestRegistrySeedQuestions(t *testing.T) {
 	reg := builtin.DefaultRegistry()
 	seeds := reg.SeedQuestions()
-	if len(seeds) < 22 {
-		t.Fatalf("got %d seeded questions, want at least 22", len(seeds))
+
+	wantQuestions := 0
+	for _, a := range reg.All() {
+		wantQuestions += len(a.SeedQuestions())
 	}
+	if len(seeds) < wantQuestions {
+		t.Fatalf("got %d seeded questions, want at least %d", len(seeds), wantQuestions)
+	}
+
 	ids := map[string]bool{}
 	for _, q := range seeds {
 		if ids[q.ID] {
@@ -80,11 +96,11 @@ func TestRegistryScoreMatchesHypothesisEngine(t *testing.T) {
 
 type customProbe struct{}
 
-func (customProbe) ID() string           { return "custom-probe" }
-func (customProbe) Name() string         { return "Custom Probe" }
+func (customProbe) ID() string               { return "custom-probe" }
+func (customProbe) Name() string             { return "Custom Probe" }
 func (customProbe) Domain() archetype.Domain { return archetype.DomainGeneric }
-func (customProbe) Priority() int        { return 1 }
-func (customProbe) HypothesisID() string { return "hypothesis-custom-probe" }
+func (customProbe) Priority() int            { return 1 }
+func (customProbe) HypothesisID() string     { return "hypothesis-custom-probe" }
 func (customProbe) Applicable(archetype.ScoreContext) bool { return true }
 func (customProbe) ExpectedEvidence() []model.Category     { return nil }
 func (customProbe) TypicalSubcauses() []string               { return nil }

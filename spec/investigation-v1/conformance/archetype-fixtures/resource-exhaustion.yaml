@@ -1,0 +1,45 @@
+archetype_id: resource-exhaustion
+scenario_id: SC-ARCH-011
+tier: core
+description: OOM and memory pressure.
+start:
+    question: Why does the image service keep restarting?
+    service: image-service
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: metric-1
+        timestamp: "2026-06-27T09:00:00Z"
+        category: metrics
+        entity: image-service
+        summary: memory usage climbing 60% -> 95%, heap growth over 2h
+    - - id: infra-1
+        timestamp: "2026-06-27T09:30:00Z"
+        category: infrastructure_events
+        entity: image-service
+        summary: Pod OOMKilled and restarted
+      - id: log-1
+        timestamp: "2026-06-27T09:31:00Z"
+        category: application_logs
+        entity: image-service
+        summary: 'java.lang.OutOfMemoryError: Java heap space'
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-resource-exhaustion
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

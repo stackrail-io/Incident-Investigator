@@ -314,6 +314,150 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Confidence = 30
 			res.Reason = "Need security event evidence."
 		}
+	case "node-unavailable":
+		if sig.Keywords["infrastructure"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 88
+			res.Reason = "Infrastructure or node failure symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need infrastructure event evidence."
+		}
+	case "k8s-crashloop":
+		if sig.Keywords["kubernetes"] || sig.Keywords["restart"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 87
+			res.Reason = "Kubernetes lifecycle or restart symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need infrastructure and log evidence for Kubernetes faults."
+		}
+	case "image-pull-failed":
+		if sig.Keywords["container"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 86
+			res.Reason = "Container runtime or image pull symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need container runtime evidence."
+		}
+	case "storage-unavailable":
+		if sig.Keywords["storage"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 88
+			res.Reason = "Storage unavailability or saturation symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need storage and metrics evidence."
+		}
+	case "cache-unavailable":
+		if sig.Keywords["cache"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 85
+			res.Reason = "Cache unavailability or stampede symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need cache and metrics evidence."
+		}
+	case "consumer-lag":
+		if sig.Keywords["messaging"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 87
+			res.Reason = "Messaging queue or consumer lag symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need messaging log and metrics evidence."
+		}
+	case "lb-health-check":
+		if sig.Keywords["loadbalancer"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 88
+			res.Reason = "Load balancer or proxy health-check symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need network and log evidence for load-balancer faults."
+		}
+	case "api-breaking-change":
+		if sig.Keywords["apicontract"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 86
+			res.Reason = "API contract or schema mismatch symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need application log evidence for contract failures."
+		}
+	case "data-corrupted":
+		if sig.Keywords["datacorruption"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 90
+			res.Reason = "Data corruption or integrity failure symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need database and log evidence for corruption."
+		}
+	case "clock-drift":
+		if sig.Keywords["clock"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 84
+			res.Reason = "Clock drift or time-sync symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need infrastructure evidence for clock faults."
+		}
+	case "feature-flag-changed":
+		if sig.Keywords["featureflag"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 87
+			res.Reason = "Feature-flag change symptoms detected."
+		} else if s.HasCategory(model.CategoryConfigurationChanges) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 68
+			res.Reason = "Configuration change without feature-flag signals."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need configuration evidence for flag changes."
+		}
+	case "az-failure":
+		if sig.Keywords["regional"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 89
+			res.Reason = "Regional or availability-zone failure symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need regional infrastructure evidence."
+		}
+	case "failover-incomplete":
+		if sig.Keywords["dr"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 86
+			res.Reason = "Disaster-recovery or failover failure symptoms detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need failover and database evidence."
+		}
+	case "observability-gap":
+		if sig.Keywords["observability"] {
+			res.Status = model.ResolutionConfirmed
+			res.Confidence = 80
+			res.Reason = "Observability gap or missing telemetry detected."
+		} else {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 30
+			res.Reason = "Need log and human-context evidence for observability gaps."
+		}
 	default:
 		res.Status = model.ResolutionConfirmed
 		res.Confidence = 70

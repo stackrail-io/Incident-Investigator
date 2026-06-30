@@ -1,0 +1,47 @@
+archetype_id: configuration-drift
+scenario_id: SC-ARCH-003
+tier: core
+description: Configuration change caused service failure without Kubernetes lifecycle symptoms.
+start:
+    question: Why did the worker fail after the config change?
+    service: worker
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: cfg-1
+        timestamp: "2026-06-27T09:00:00Z"
+        category: configuration_changes
+        entity: worker
+        summary: Applied new ConfigMap with invalid DB_HOST env var
+    - - id: log-1
+        timestamp: "2026-06-27T09:02:00Z"
+        category: application_logs
+        entity: worker
+        summary: 'fatal: cannot connect using configured DB_HOST'
+      - id: alert-1
+        timestamp: "2026-06-27T09:03:00Z"
+        category: alert_events
+        entity: worker
+        summary: error rate spiked after ConfigMap change
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-configuration-change
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-kubernetes-failure
+        - hypothesis-deployment-caused
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

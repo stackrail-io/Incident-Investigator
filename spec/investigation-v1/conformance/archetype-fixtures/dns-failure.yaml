@@ -1,0 +1,41 @@
+archetype_id: dns-failure
+scenario_id: SC-ARCH-008
+tier: core
+description: DNS resolution failure.
+start:
+    question: Why can't payments reach the database?
+    service: payments-api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: net-1
+        timestamp: "2026-06-27T09:00:00Z"
+        category: network_events
+        entity: payments-api
+        summary: DNS resolution failures for db.internal (NXDOMAIN)
+    - - id: log-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: application_logs
+        entity: payments-api
+        summary: could not resolve host db.internal; name resolution error
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-dns-failure
+    min_confidence: 10
+    min_lead_margin: 5
+    must_not_lead:
+        - hypothesis-network-failure
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

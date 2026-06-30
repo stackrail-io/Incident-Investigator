@@ -290,5 +290,95 @@ func DefaultPatternLibrary() []model.InvestigationPattern {
 			},
 			TypicalRootCause: "hypothesis-external-outage",
 		},
+		{
+			ID: "pattern-infrastructure-failure", Name: "Infrastructure Failure Pattern",
+			Description: "Node, hypervisor, or hardware faults take workloads offline.",
+			Trigger: model.GraphPattern{Sequence: []string{"node", "hardware", "unavailable"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryInfrastructureEvents, model.CategoryAlertEvents,
+			},
+			TypicalRootCause: "hypothesis-infrastructure-failure",
+		},
+		{
+			ID: "pattern-kubernetes-failure", Name: "Kubernetes Failure Pattern",
+			Description: "Pod scheduling, readiness, or crash loops disrupt service availability.",
+			Trigger: model.GraphPattern{Sequence: []string{"kubernetes", "readiness", "restart"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryInfrastructureEvents, model.CategoryApplicationLogs,
+			},
+			TypicalRootCause: "hypothesis-kubernetes-failure",
+		},
+		{
+			ID: "pattern-messaging-failure", Name: "Messaging Failure Pattern",
+			Description: "Queue backlog and consumer lag stall asynchronous processing.",
+			Trigger: model.GraphPattern{Sequence: []string{"kafka", "consumer", "lag"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryApplicationLogs, model.CategoryMetrics,
+			},
+			TypicalRootCause: "hypothesis-messaging-failure",
+		},
+		{
+			ID: "pattern-cache-failure", Name: "Cache Failure Pattern",
+			Description: "Cache outages or stampedes spike origin load and latency.",
+			Trigger: model.GraphPattern{Sequence: []string{"cache", "redis", "unavailable"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryMetrics, model.CategoryApplicationLogs,
+			},
+			TypicalRootCause: "hypothesis-cache-failure",
+		},
+		{
+			ID: "pattern-storage-failure", Name: "Storage Failure Pattern",
+			Description: "Disk, volume, or mount failures block reads and writes.",
+			Trigger: model.GraphPattern{Sequence: []string{"storage", "disk", "mount"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryInfrastructureEvents, model.CategoryMetrics,
+			},
+			TypicalRootCause: "hypothesis-storage-failure",
+		},
+		{
+			ID: "pattern-load-balancer-failure", Name: "Load Balancer Failure Pattern",
+			Description: "Health-check or routing faults drop healthy backends.",
+			Trigger: model.GraphPattern{Sequence: []string{"load balancer", "health", "backend"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryNetworkEvents, model.CategoryApplicationLogs,
+			},
+			TypicalRootCause: "hypothesis-load-balancer-failure",
+		},
+		{
+			ID: "pattern-feature-flag-failure", Name: "Feature Flag Failure Pattern",
+			Description: "Feature-flag rollouts affect traffic subsets without a full deploy.",
+			Trigger: model.GraphPattern{Sequence: []string{"feature flag", "rollout", "enabled"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryConfigurationChanges, model.CategoryApplicationLogs,
+			},
+			TypicalRootCause: "hypothesis-feature-flag-failure",
+		},
+		{
+			ID: "pattern-regional-failure", Name: "Regional Failure Pattern",
+			Description: "Availability-zone or regional outages isolate capacity.",
+			Trigger: model.GraphPattern{Sequence: []string{"region", "availability zone", "outage"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryInfrastructureEvents, model.CategoryNetworkEvents,
+			},
+			TypicalRootCause: "hypothesis-regional-failure",
+		},
+		{
+			ID: "pattern-api-contract-failure", Name: "API Contract Failure Pattern",
+			Description: "Schema or version mismatches break client-server compatibility.",
+			Trigger: model.GraphPattern{Sequence: []string{"schema", "version", "serialization"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryApplicationLogs, model.CategoryTraceEvents,
+			},
+			TypicalRootCause: "hypothesis-api-contract-failure",
+		},
+		{
+			ID: "pattern-performance-regression", Name: "Performance Regression Pattern",
+			Description: "Latency or throughput degrades without saturation or retry amplification.",
+			Trigger: model.GraphPattern{Sequence: []string{"latency", "regression", "slow"}},
+			ExpectedEvidence: []model.Category{
+				model.CategoryMetrics, model.CategoryTraceEvents,
+			},
+			TypicalRootCause: "hypothesis-performance-regression",
+		},
 	}
 }

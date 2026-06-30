@@ -1,0 +1,41 @@
+archetype_id: external-outage
+scenario_id: SC-ARCH-026
+tier: core
+description: Third-party provider outage.
+start:
+    question: Why are payments failing?
+    service: payments-api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: log-1
+        timestamp: "2026-06-27T09:00:00Z"
+        category: application_logs
+        entity: payments-api
+        summary: third-party payment provider outage; external service unavailable
+    - - id: log-2
+        timestamp: "2026-06-27T09:01:00Z"
+        category: application_logs
+        entity: payments-api
+        summary: vendor status page reports provider outage; SaaS external dependency down
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-external-outage
+    min_confidence: 10
+    min_lead_margin: 2
+    must_not_lead:
+        - hypothesis-dependency-failure
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

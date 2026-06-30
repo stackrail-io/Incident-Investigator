@@ -3,72 +3,25 @@ package spec_test
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
 	"github.com/stackrail/incident-investigator/internal/model"
 	runtimepkg "github.com/stackrail/incident-investigator/internal/runtime"
+	"github.com/stackrail/incident-investigator/internal/spec"
 )
-
-type conformanceFixture struct {
-	ScenarioID   string `json:"scenario_id"`
-	Tier         string `json:"tier"`
-	Description  string `json:"description"`
-	Start        struct {
-		Question   string `json:"question"`
-		Service    string `json:"service"`
-		Goal       string `json:"goal"`
-		TimeWindow struct {
-			Start string `json:"start"`
-			End   string `json:"end"`
-		} `json:"time_window"`
-	} `json:"start"`
-	ExpectAfterStart struct {
-		RequiredEvidenceMin int `json:"required_evidence_min"`
-		PlanQuestionsMin    int `json:"plan_questions_min"`
-	} `json:"expect_after_start"`
-	EvidenceBatches []json.RawMessage `json:"evidence_batches"`
-	ExpectAfterAllEvidence struct {
-		LeadingHypothesisID string  `json:"leading_hypothesis_id"`
-		MinConfidence       float64 `json:"min_confidence"`
-		MinHypotheses       int     `json:"min_hypotheses"`
-		GraphNodesMin       int     `json:"graph_nodes_min"`
-	} `json:"expect_after_all_evidence"`
-	ExpectAfterFinish struct {
-		State                string   `json:"state"`
-		ReportRequiredFields []string `json:"report_required_fields"`
-	} `json:"expect_after_finish"`
-}
-
-func TestSpecConformanceFixtures(t *testing.T) {
-	dir := conformanceFixturesDir(t)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("read fixtures: %v", err)
-	}
-	for _, e := range entries {
-		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
-			continue
-		}
-		t.Run(e.Name(), func(t *testing.T) {
-			runConformanceFixture(t, filepath.Join(dir, e.Name()))
-		})
-	}
-}
 
 func runConformanceFixture(t *testing.T, path string) {
 	t.Helper()
-	data, err := os.ReadFile(path)
+	fx, err := spec.LoadConformanceFixture(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var fx conformanceFixture
-	if err := json.Unmarshal(data, &fx); err != nil {
-		t.Fatal(err)
-	}
+	runConformanceFixtureData(t, fx)
+}
+
+func runConformanceFixtureData(t *testing.T, fx *spec.ConformanceFixture) {
+	t.Helper()
 
 	now := time.Date(2026, 6, 27, 12, 0, 0, 0, time.UTC)
 	rt := runtimepkg.New(runtimepkg.WithClock(func() time.Time { return now }))
@@ -98,14 +51,22 @@ func runConformanceFixture(t *testing.T, path string) {
 		t.Errorf("plan questions: got %d, want >= %d", len(sess.Plan.Questions), fx.ExpectAfterStart.PlanQuestionsMin)
 	}
 
-	for i, batchRaw := range fx.EvidenceBatches {
-		var batch []model.Evidence
-		if err := json.Unmarshal(batchRaw, &batch); err != nil {
-			t.Fatalf("batch %d: %v", i, err)
-		}
+	for i, batch := range fx.EvidenceBatches {
 		ev := make([]*model.Evidence, len(batch))
-		for j := range batch {
-			ev[j] = &batch[j]
+		for j, item := range batch {
+			ts, err := time.Parse(time.RFC3339, item.Timestamp)
+			if err != nil {
+				t.Fatalf("batch %d item %d timestamp: %v", i, j, err)
+			}
+			ev[j] = &model.Evidence{
+				ID:        item.ID,
+				Timestamp: ts,
+				Category:  model.Category(item.Category),
+				Entity:    item.Entity,
+				Summary:   item.Summary,
+				Payload:   item.Payload,
+				Source:    "provided_by_client",
+			}
 		}
 		sess, err = rt.Submit(ctx, sess.ID, ev)
 		if err != nil {
@@ -116,9 +77,7 @@ func runConformanceFixture(t *testing.T, path string) {
 	if len(sess.Hypotheses) < fx.ExpectAfterAllEvidence.MinHypotheses {
 		t.Errorf("hypotheses: got %d, want >= %d", len(sess.Hypotheses), fx.ExpectAfterAllEvidence.MinHypotheses)
 	}
-	if len(sess.Hypotheses) > 0 && sess.Hypotheses[0].ID != fx.ExpectAfterAllEvidence.LeadingHypothesisID {
-		t.Errorf("leading hypothesis: got %q, want %q", sess.Hypotheses[0].ID, fx.ExpectAfterAllEvidence.LeadingHypothesisID)
-	}
+	assertHypothesisLeadQuality(t, sess.Hypotheses, fx)
 	if sess.Confidence < fx.ExpectAfterAllEvidence.MinConfidence {
 		t.Errorf("confidence: got %.1f, want >= %.1f", sess.Confidence, fx.ExpectAfterAllEvidence.MinConfidence)
 	}
@@ -147,7 +106,6 @@ func runConformanceFixture(t *testing.T, path string) {
 		}
 	}
 
-	// Spec v1: investigation snapshot must serialize core fields.
 	snap, err := json.Marshal(sessionToSpecInvestigation(finished))
 	if err != nil {
 		t.Fatal(err)
@@ -161,6 +119,66 @@ func runConformanceFixture(t *testing.T, path string) {
 			t.Errorf("Investigation spec snapshot missing %q", key)
 		}
 	}
+}
+
+func assertHypothesisLeadQuality(t *testing.T, hyps []model.Hypothesis, fx *spec.ConformanceFixture) {
+	t.Helper()
+	if len(hyps) == 0 {
+		t.Fatal("expected non-empty hypothesis field")
+	}
+
+	wantID := fx.ExpectAfterAllEvidence.LeadingHypothesisID
+	leader, ok := hypothesisByID(hyps, wantID)
+	if !ok {
+		t.Fatalf("expected leader %q not found in hypothesis field", wantID)
+	}
+
+	runnerUpID, runnerUpConf := strongestOther(hyps, wantID)
+	if runnerUpConf > leader.Confidence {
+		t.Errorf("leading hypothesis: %q=%.1f should beat runner-up %q=%.1f",
+			wantID, leader.Confidence, runnerUpID, runnerUpConf)
+	}
+
+	for _, id := range fx.EffectiveMustNotLead() {
+		if h, ok := hypothesisByID(hyps, id); ok && h.Confidence >= leader.Confidence {
+			t.Errorf("hypothesis %q must not lead or tie leader %q (%.1f vs %.1f)",
+				id, wantID, h.Confidence, leader.Confidence)
+		}
+	}
+
+	margin := fx.EffectiveLeadMargin()
+	if margin <= 0 {
+		return
+	}
+	gap := leader.Confidence - runnerUpConf
+	if gap < margin {
+		t.Errorf("lead margin: got %.1f, want >= %.1f (leader %q=%.1f, runner-up %q=%.1f)",
+			gap, margin, wantID, leader.Confidence, runnerUpID, runnerUpConf)
+	}
+}
+
+func hypothesisByID(hyps []model.Hypothesis, id string) (model.Hypothesis, bool) {
+	for _, h := range hyps {
+		if h.ID == id {
+			return h, true
+		}
+	}
+	return model.Hypothesis{}, false
+}
+
+func strongestOther(hyps []model.Hypothesis, excludeID string) (string, float64) {
+	bestID := ""
+	var best float64
+	for _, h := range hyps {
+		if h.ID == excludeID {
+			continue
+		}
+		if h.Confidence > best {
+			best = h.Confidence
+			bestID = h.ID
+		}
+	}
+	return bestID, best
 }
 
 func sessionToSpecInvestigation(s *model.Session) map[string]any {
@@ -178,13 +196,4 @@ func sessionToSpecInvestigation(s *model.Session) map[string]any {
 		"graph":            s.Graph,
 		"plan":             s.Plan,
 	}
-}
-
-func conformanceFixturesDir(t *testing.T) string {
-	t.Helper()
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("caller")
-	}
-	return filepath.Join(filepath.Dir(file), "..", "..", "spec", "investigation-v1", "conformance", "fixtures")
 }

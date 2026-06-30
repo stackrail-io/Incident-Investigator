@@ -1,0 +1,42 @@
+archetype_id: kubernetes-failure
+scenario_id: SC-ARCH-015
+tier: core
+description: Kubernetes scheduling and readiness faults.
+start:
+    question: Why are pods not ready?
+    service: worker
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: infra-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: infrastructure_events
+        entity: worker
+        summary: kubernetes pending pod; readiness probe failing on k8s workload
+    - - id: log-1
+        timestamp: "2026-06-27T09:02:00Z"
+        category: application_logs
+        entity: worker
+        summary: kubelet scheduler could not place pod; liveness probe failed
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-kubernetes-failure
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-deployment-caused
+        - hypothesis-configuration-change
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

@@ -16,6 +16,22 @@ func TestCorpusSize(t *testing.T) {
 	}
 }
 
+func TestPatternLibrarySize(t *testing.T) {
+	lib := intelligence.DefaultPatternLibrary()
+	if len(lib) < 15 {
+		t.Fatalf("expected at least 15 investigation patterns, got %d", len(lib))
+	}
+	roots := map[string]bool{}
+	for _, p := range lib {
+		if p.TypicalRootCause != "" {
+			roots[p.TypicalRootCause] = true
+		}
+	}
+	if len(roots) < 15 {
+		t.Fatalf("expected patterns for at least 15 root causes, got %d", len(roots))
+	}
+}
+
 func TestArchiveStoreAndFind(t *testing.T) {
 	arch := intelligence.NewMemoryArchive()
 	intelligencefixtures.LoadCorpusIntoArchive(arch)

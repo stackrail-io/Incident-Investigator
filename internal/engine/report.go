@@ -37,9 +37,13 @@ var recommendationsByHypothesis = map[string][]string{
 		"Audit the recent configuration/feature-flag change and revert if needed.",
 		"Add configuration validation and staged rollout in CI/CD.",
 	},
-	"hypothesis-network-dns": {
-		"Verify DNS resolvers and network paths; add synthetic connectivity checks.",
+	"hypothesis-network-failure": {
+		"Verify routing, firewall rules, and network paths; add synthetic connectivity checks.",
 		"Implement resilient retries with jittered backoff for transient failures.",
+	},
+	"hypothesis-dns-failure": {
+		"Verify DNS resolvers, TTL settings, and record correctness.",
+		"Add DNS failover and caching resilience for critical dependencies.",
 	},
 	"hypothesis-certificate-expiry": {
 		"Renew the affected certificate and automate renewal (e.g. ACME).",
@@ -80,6 +84,62 @@ var recommendationsByHypothesis = map[string][]string{
 	"hypothesis-security-incident": {
 		"Contain compromised credentials and rotate secrets immediately.",
 		"Engage security team for forensics and audit access logs.",
+	},
+	"hypothesis-infrastructure-failure": {
+		"Verify cloud health dashboards and evacuate affected nodes or zones.",
+		"Add redundancy across availability zones and automate node replacement.",
+	},
+	"hypothesis-kubernetes-failure": {
+		"Inspect pod events, readiness probes, and scheduler constraints.",
+		"Add pod disruption budgets and resource requests/limits.",
+	},
+	"hypothesis-container-failure": {
+		"Verify image tags, registry availability, and runtime logs.",
+		"Pin images by digest and add pull-policy safeguards.",
+	},
+	"hypothesis-storage-failure": {
+		"Check volume attach status, disk usage, and IO latency metrics.",
+		"Add storage capacity alerts and automated volume expansion.",
+	},
+	"hypothesis-cache-failure": {
+		"Verify cache cluster health and hit-ratio metrics.",
+		"Add cache warming and stampede protection on hot keys.",
+	},
+	"hypothesis-messaging-failure": {
+		"Inspect consumer lag, dead-letter queues, and broker health.",
+		"Add backpressure and poison-message handling.",
+	},
+	"hypothesis-load-balancer-failure": {
+		"Verify health-check configuration and backend pool membership.",
+		"Add multi-layer health checks and graceful connection draining.",
+	},
+	"hypothesis-api-contract-failure": {
+		"Compare API schemas across client and server versions.",
+		"Add contract tests and schema validation in CI/CD.",
+	},
+	"hypothesis-data-corruption": {
+		"Run integrity checks and audit recent migrations or writes.",
+		"Add checksums and point-in-time recovery procedures.",
+	},
+	"hypothesis-clock-failure": {
+		"Verify NTP sync and clock skew across nodes.",
+		"Add clock-drift monitoring and chrony/chronyd health checks.",
+	},
+	"hypothesis-feature-flag-failure": {
+		"Audit recent flag changes and rollout audience targeting.",
+		"Add flag change approval gates and canary rollouts.",
+	},
+	"hypothesis-regional-failure": {
+		"Confirm regional cloud health and traffic distribution.",
+		"Enable multi-region failover and cross-region load balancing.",
+	},
+	"hypothesis-dr-failover-failure": {
+		"Review failover logs and replication state.",
+		"Run regular DR drills and automate failover validation.",
+	},
+	"hypothesis-observability-failure": {
+		"Restore telemetry agents and fill observability gaps.",
+		"Add agent health monitoring and minimum coverage SLOs.",
 	},
 }
 
