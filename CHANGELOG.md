@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **v1.1 architecture documentation** — `docs/architecture.md`, `docs/design-principles.md`, `docs/development.md`, `docs/extension-apis.md`, and eight ADRs under `docs/adr/`.
+- **Investigation Specification overview** — `spec/investigation-v1/SPECIFICATION.md` (implementation-independent entity and protocol reference).
+- **Public extension package** — `pkg/extension` provider registries and documented extension contracts.
+- **Exporters** — `pkg/export` supports Markdown, JSON, Mermaid, GraphML, and PlantUML without coupling to runtime internals.
+- **Example investigations** — `examples/` with seven scenarios and `go test ./examples/...` regression coverage.
+- **Event bus** — `internal/events` publishes lifecycle events; `runtime.WithEventBus` and `runtime.EventBus()`.
+- **Explainability helpers** — `internal/explain` answers why a hypothesis leads, why confidence is at its level, and why more evidence is required.
+- **Runtime extension options** — `WithReasonerRegistry`, `WithEventBus`; orchestrator respects pre-configured options.
 - **Full 30-category archetype library** — 32 built-in archetypes (30 taxonomy items plus `deployment-unrelated` and a database lock-contention split) in `internal/archetype/builtin/`.
 - **Archetype spec contract** — `spec/investigation-v1/archetypes.yaml` declares every archetype (id, domain, hypothesis_id, signal triggers, expected evidence) and links to a portable YAML conformance fixture per archetype under `spec/investigation-v1/conformance/archetype-fixtures/`.
 - **Archetype scoring depth** — `scoreWith` helper in `internal/archetype/builtin/scorer.go` adds boosts, penalties, and skip rules for remaining archetypes; collision unit tests guard network/DNS, load-balancer/network, dependency/external, config/feature-flag, and retry/performance pairs.
@@ -23,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **README rewrite** — architecture-first positioning (LLMs collect evidence; runtime conducts investigations), comparison to agents/LangGraph/MCP, extension model, and links to spec/examples.
 - **Network/DNS hypothesis split** — `hypothesis-network-dns` is replaced by `hypothesis-network-failure` (routing, packet loss) and `hypothesis-dns-failure` (name resolution). See README migration table.
 - **Confidence dilution** — with 32 competing archetypes, normalized hypothesis confidence is lower than the original 10-archetype library; conformance tests assert leading hypothesis **by confidence** (not slice order), with per-fixture `min_lead_margin` and `must_not_lead` where archetypes compete closely.
 - **Conformance fixture format** — archetype scenarios are YAML (`conformance/archetype-fixtures/*.yaml`), aligned with other spec documents. The legacy `conformance/fixtures/bad-deployment.json` is removed; use `deployment-failure.yaml` instead.
