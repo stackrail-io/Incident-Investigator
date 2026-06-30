@@ -1,8 +1,16 @@
 # Contributing to Incident Investigator
 
 Thank you for your interest in contributing. Incident Investigator is a
-vendor-neutral investigation engine — we welcome fixes, tests, documentation,
+vendor-neutral investigation runtime — we welcome fixes, tests, documentation,
 and engine improvements that stay true to that philosophy.
+
+## Documentation
+
+- [Architecture](docs/architecture.md), [philosophy](docs/philosophy.md), and [design principles](docs/design-principles.md)
+- [Development guide](docs/development.md)
+- [Extension APIs](docs/extension-apis.md)
+- [Investigation Specification](spec/investigation-v1/SPECIFICATION.md)
+- [Examples](examples/README.md)
 
 ## Before you start
 
@@ -63,7 +71,11 @@ Add or update tests when you change engine behavior. Realistic fixtures live in
 | `internal/engine/` | Planner, hypotheses, confidence, etc. (interfaces + heuristics) |
 | `internal/runtime/` | Session lifecycle and store |
 | `internal/mcpserver/` | MCP tool wiring |
-| `internal/fixtures/` | Incident scenarios for tests |
+| `examples/` | End-to-end example investigations |
+| `pkg/extension/` | Public extension registries |
+| `pkg/export/` | Investigation exporters |
+| `docs/` | Architecture, ADRs, development guide |
+| `spec/investigation-v1/` | Normative investigation spec |
 
 ## Making changes
 

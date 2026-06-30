@@ -9,9 +9,11 @@ import (
 
 	"github.com/stackrail/incident-investigator/internal/engine"
 	"github.com/stackrail/incident-investigator/internal/engine/protocol"
+	"github.com/stackrail/incident-investigator/internal/events"
 	"github.com/stackrail/incident-investigator/internal/intelligence"
 	"github.com/stackrail/incident-investigator/internal/model"
 	"github.com/stackrail/incident-investigator/internal/reasoners"
+	"github.com/stackrail/incident-investigator/internal/reasoning"
 )
 
 // Engines bundles the pluggable reasoning components. Every field is an
@@ -74,6 +76,7 @@ type Runtime struct {
 	intelligence intelligence.Intelligence
 	thresholds   Thresholds
 	now          func() time.Time
+	events       *events.Bus
 }
 
 // Option customizes a Runtime.
@@ -93,6 +96,24 @@ func WithOrchestrator(o *engine.Orchestrator) Option {
 	return func(r *Runtime) { r.orchestrator = o }
 }
 
+// WithReasonerRegistry replaces the default reasoner set.
+func WithReasonerRegistry(reg *reasoning.Registry) Option {
+	return func(r *Runtime) {
+		r.orchestrator = engine.NewOrchestratorWithRegistry(reg)
+	}
+}
+
+// WithEventBus attaches an event bus; if nil, a new bus is created.
+func WithEventBus(bus *events.Bus) Option {
+	return func(r *Runtime) {
+		if bus == nil {
+			r.events = events.NewBus()
+		} else {
+			r.events = bus
+		}
+	}
+}
+
 // New constructs a Runtime with sensible defaults.
 func New(opts ...Option) *Runtime {
 	r := &Runtime{
@@ -102,11 +123,14 @@ func New(opts ...Option) *Runtime {
 		intelligence: intelligence.NewMemoryService(),
 		thresholds:   DefaultThresholds(),
 		now:          time.Now,
+		events:       events.NewBus(),
 	}
 	for _, opt := range opts {
 		opt(r)
 	}
-	r.orchestrator = engine.NewOrchestratorWithRegistry(reasoners.DefaultRegistry(r.reasoningEngines()))
+	if r.orchestrator == nil {
+		r.orchestrator = engine.NewOrchestratorWithRegistry(reasoners.DefaultRegistry(r.reasoningEngines()))
+	}
 	return r
 }
 
@@ -201,6 +225,9 @@ func (r *Runtime) Start(ctx context.Context, in StartInput) (*model.Session, err
 	if err := r.store.Create(s); err != nil {
 		return nil, err
 	}
+	if s.Plan != nil && len(s.Plan.Questions) > 0 {
+		r.publish(events.QuestionCreated, s.ID, fmt.Sprintf("%d questions", len(s.Plan.Questions)), s.Plan.Questions)
+	}
 	return s, nil
 }
 
@@ -235,6 +262,7 @@ func (r *Runtime) Submit(ctx context.Context, sessionID string, evidence []*mode
 		s.AddHistory("evidence_submitted", pluralizeCount(len(evidence), "evidence item"), now)
 		s.AddJournal("evidence_submitted", pluralizeCount(len(evidence), "item"), s.Confidence, now)
 		r.recompute(ctx, s)
+		r.publish(events.EvidenceAdded, s.ID, pluralizeCount(len(evidence), "item"), evidence)
 		s.UpdatedAt = now
 		return nil
 	})
@@ -339,6 +367,7 @@ func (r *Runtime) ResolveQuestion(ctx context.Context, in ResolveQuestionInput) 
 		sig := engine.Analyze(s)
 		s.Confidence = r.engines.Confidence.Score(s, sig, s.Hypotheses, s.Contradictions, s.Progress)
 		s.AddJournal("question_resolved", in.QuestionID, s.Confidence, now)
+		r.publish(events.QuestionResolved, s.ID, in.QuestionID, res)
 		s.UpdatedAt = now
 		return nil
 	})
@@ -381,6 +410,7 @@ func (r *Runtime) Finish(ctx context.Context, sessionID string) (model.Report, *
 			}
 			s.AddHistory("finished", "final report generated", now)
 			s.AddJournal("investigation_completed", "final report generated", s.Confidence, now)
+			r.publish(events.InvestigationCompleted, s.ID, "finished", report)
 		}
 		return nil
 	})
@@ -450,6 +480,7 @@ func (r *Runtime) recompute(ctx context.Context, s *model.Session) {
 			"cycle %s: %d reasoners, %d applied, %d rejected",
 			cycle.CycleID, len(cycle.Reasoners), len(cycle.AppliedActions), len(cycle.RejectedActions),
 		), s.Confidence, now)
+		r.publish(events.ReasoningCompleted, s.ID, cycle.CycleID, cycle)
 	}
 
 	// Investigation protocol: questions → evidence requests → resolution → hypotheses.
@@ -539,4 +570,25 @@ func pluralizeCount(n int, noun string) string {
 
 func roundConfidenceDelta(v float64) float64 {
 	return float64(int(v*10+0.5)) / 10
+}
+
+// EventBus returns the runtime event bus for subscriptions.
+func (r *Runtime) EventBus() *events.Bus {
+	if r.events == nil {
+		r.events = events.NewBus()
+	}
+	return r.events
+}
+
+func (r *Runtime) publish(typ events.Type, investigationID, detail string, payload any) {
+	if r.events == nil {
+		return
+	}
+	r.events.Publish(events.Event{
+		Type:            typ,
+		InvestigationID: investigationID,
+		Timestamp:       r.now(),
+		Detail:          detail,
+		Payload:         payload,
+	})
 }

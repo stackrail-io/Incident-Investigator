@@ -24,6 +24,7 @@ Its MCP tools are one **binding** of the protocol — not the protocol itself.
 
 | Document | Purpose |
 | -------- | ------- |
+| [SPECIFICATION.md](./SPECIFICATION.md) | Plain-language overview of entities, lifecycle, and protocol |
 | [jsonschema/investigation-v1.schema.json](./jsonschema/investigation-v1.schema.json) | Bundled JSON Schema (draft 2020-12) for tooling |
 | [model.yaml](./model.yaml) | Core entities: Investigation, Question, Evidence, Hypothesis, Finding, … |
 | [lifecycle.yaml](./lifecycle.yaml) | Canonical state machine and stage annotations |
