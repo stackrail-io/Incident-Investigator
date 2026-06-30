@@ -40,7 +40,7 @@ evidence_batches:
         summary: Rolled back checkout-api to v2.3.9; service recovered
 expect_after_all_evidence:
     leading_hypothesis_id: hypothesis-deployment-caused
-    min_confidence: 10
+    min_confidence: 20
     min_lead_margin: 5
     must_not_lead:
         - hypothesis-unknown

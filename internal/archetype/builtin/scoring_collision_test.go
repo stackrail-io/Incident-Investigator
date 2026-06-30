@@ -10,6 +10,8 @@ import (
 	sigpkg "github.com/stackrail/incident-investigator/internal/signals"
 )
 
+// TestKeywordCollisionLeadingHypothesis compares raw Candidate.Score values before
+// registry normalization. End-to-end confidence ordering is covered by spec conformance tests.
 func TestKeywordCollisionLeadingHypothesis(t *testing.T) {
 	now := time.Date(2026, 6, 27, 9, 0, 0, 0, time.UTC)
 	cases := []struct {

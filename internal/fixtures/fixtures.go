@@ -49,7 +49,7 @@ func ConfigurationDrift() Fixture { return mustLoad("configuration-drift") }
 // KubernetesFailure is a Kubernetes scheduling and readiness scenario.
 func KubernetesFailure() Fixture { return mustLoad("kubernetes-failure") }
 
-// KubernetesRestartLoop is deprecated; use ConfigurationDrift or KubernetesFailure.
+// Deprecated: use ConfigurationDrift for config mistakes or KubernetesFailure for pod lifecycle faults.
 func KubernetesRestartLoop() Fixture { return ConfigurationDrift() }
 
 // MemoryLeak is a resource-exhaustion / OOM scenario.

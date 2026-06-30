@@ -1,4 +1,5 @@
 archetype_id: database-lock-contention
+hand_tuned: true
 scenario_id: SC-ARCH-006
 tier: core
 description: Row lock queue with healthy database metrics.
@@ -72,7 +73,7 @@ evidence_batches:
             rows_affected: 0
 expect_after_all_evidence:
     leading_hypothesis_id: hypothesis-lock-contention
-    min_confidence: 10
+    min_confidence: 18
     min_lead_margin: 3
     must_not_lead:
         - hypothesis-unknown

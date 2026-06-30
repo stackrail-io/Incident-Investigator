@@ -25,7 +25,7 @@ evidence_batches:
         summary: could not resolve host db.internal; name resolution error
 expect_after_all_evidence:
     leading_hypothesis_id: hypothesis-dns-failure
-    min_confidence: 10
+    min_confidence: 18
     min_lead_margin: 5
     must_not_lead:
         - hypothesis-network-failure

@@ -15,7 +15,7 @@ var Keywords = map[string][]string{
 	"rollback":   {"rollback", "rolled back", "reverted", "roll back"},
 	"recovery":   {"back to normal", "service recovered", "incident resolved", "fully restored"},
 	"database":   {"database", "postgres", "mysql", "sql", "connection pool", "db connection", "query timeout", "deadlock", "replica", "saturat"},
-	"config":     {"config", "configuration", "env var", "environment variable", "feature flag", "secret", "parameter"},
+	"config":     {"config", "configuration", "env var", "environment variable", "secret", "parameter", "configmap"},
 	"dns":        {"dns", "name resolution", "nxdomain", "resolve host", "could not resolve"},
 	"network":    {"network", "packet loss", "connection refused", "connection reset", "unreachable", "tcp", "socket"},
 	"cert":       {"certificate", "tls", "ssl", "x509", "handshake", "expired cert"},

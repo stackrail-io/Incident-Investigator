@@ -14,6 +14,7 @@ import (
 // Archetype fixtures use YAML; legacy core fixtures may remain JSON.
 type ConformanceFixture struct {
 	ArchetypeID  string `yaml:"archetype_id" json:"archetype_id,omitempty"`
+	HandTuned    bool   `yaml:"hand_tuned,omitempty" json:"hand_tuned,omitempty"`
 	ScenarioID   string `yaml:"scenario_id" json:"scenario_id"`
 	Tier         string `yaml:"tier" json:"tier"`
 	Description  string `yaml:"description" json:"description"`

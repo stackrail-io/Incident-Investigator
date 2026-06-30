@@ -8,6 +8,7 @@ import (
 
 	"github.com/stackrail/incident-investigator/internal/archetype"
 	"github.com/stackrail/incident-investigator/internal/archetype/builtin"
+	"github.com/stackrail/incident-investigator/internal/signals"
 	"github.com/stackrail/incident-investigator/internal/spec"
 )
 
@@ -50,6 +51,11 @@ func TestArchetypesYAMLMatchesBuiltinRegistry(t *testing.T) {
 		}
 		if got.Priority() != want.Priority {
 			t.Errorf("%s priority: registry=%d spec=%d", want.ID, got.Priority(), want.Priority)
+		}
+		for _, trigger := range want.SignalTriggers {
+			if _, ok := signals.Keywords[trigger]; !ok {
+				t.Errorf("%s signal_trigger %q is not a signals.Keywords group", want.ID, trigger)
+			}
 		}
 		if want.ConformanceFixture == "" {
 			t.Errorf("%s: missing conformance_fixture in spec", want.ID)

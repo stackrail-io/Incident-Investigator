@@ -459,9 +459,9 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Reason = "Need log and human-context evidence for observability gaps."
 		}
 	default:
-		res.Status = model.ResolutionConfirmed
-		res.Confidence = 70
-		res.Reason = "Required evidence categories are present."
+		res.Status = model.ResolutionInsufficientEvidence
+		res.Confidence = 0
+		res.Reason = fmt.Sprintf("No explicit resolver for question %q.", q.ID)
 	}
 	if res.Status == model.ResolutionInsufficientEvidence {
 		return nil

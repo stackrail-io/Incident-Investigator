@@ -73,6 +73,8 @@ Regenerate fixtures after editing archetype evidence templates:
 go run internal/spec/cmd/gen-archetype-fixtures/main.go
 ```
 
+**Warning:** the generator overwrites every file in `conformance/archetype-fixtures/` except fixtures marked `hand_tuned: true` (for example `database-lock-contention.yaml`). Edit hand-tuned fixtures directly; keep the flag unless you intend to replace them with generator output.
+
 ## Fixture-backed scenarios (reference impl)
 
 Core scenarios are covered by per-archetype YAML fixtures in `conformance/archetype-fixtures/`. See [Archetype conformance](#archetype-conformance-normative) above.

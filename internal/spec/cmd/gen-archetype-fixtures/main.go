@@ -13,6 +13,7 @@ import (
 
 type fixture struct {
 	ArchetypeID  string       `yaml:"archetype_id"`
+	HandTuned    bool         `yaml:"hand_tuned,omitempty"`
 	ScenarioID   string       `yaml:"scenario_id"`
 	Tier         string       `yaml:"tier"`
 	Description  string       `yaml:"description"`
@@ -66,23 +67,27 @@ type expectFinish struct {
 type expectOverride struct {
 	margin    float64
 	mustNot   []string
+	minConf   float64
 }
 
 var conformanceOverrides = map[string]expectOverride{
-	"deployment-failure":       {margin: 5, mustNot: []string{"hypothesis-unknown", "hypothesis-deployment-unrelated"}},
-	"deployment-unrelated":     {margin: 5, mustNot: []string{"hypothesis-deployment-caused"}},
+	"deployment-failure":       {margin: 5, mustNot: []string{"hypothesis-unknown", "hypothesis-deployment-unrelated"}, minConf: 20},
+	"deployment-unrelated":     {margin: 5, mustNot: []string{"hypothesis-deployment-caused"}, minConf: 15},
 	"network-failure":          {margin: 3, mustNot: []string{"hypothesis-dns-failure", "hypothesis-unknown"}},
-	"dns-failure":              {margin: 5, mustNot: []string{"hypothesis-network-failure", "hypothesis-unknown"}},
+	"dns-failure":              {margin: 5, mustNot: []string{"hypothesis-network-failure", "hypothesis-unknown"}, minConf: 18},
 	"dependency-failure":     {margin: 3, mustNot: []string{"hypothesis-retry-storm", "hypothesis-unknown"}},
 	"performance-regression":   {margin: 3, mustNot: []string{"hypothesis-retry-storm", "hypothesis-unknown"}},
 	"feature-flag-failure":     {margin: 3, mustNot: []string{"hypothesis-configuration-change", "hypothesis-unknown"}},
 	"configuration-drift":      {margin: 3, mustNot: []string{"hypothesis-kubernetes-failure", "hypothesis-deployment-caused", "hypothesis-unknown"}},
 	"kubernetes-failure":       {margin: 3, mustNot: []string{"hypothesis-deployment-caused", "hypothesis-configuration-change", "hypothesis-unknown"}},
-	"database-saturation":      {margin: 3, mustNot: []string{"hypothesis-dr-failover-failure", "hypothesis-unknown"}},
+	"database-saturation":      {margin: 3, mustNot: []string{"hypothesis-dr-failover-failure", "hypothesis-unknown"}, minConf: 15},
+	"database-lock-contention":   {margin: 3, mustNot: []string{"hypothesis-unknown"}, minConf: 18},
 	"load-balancer-failure":    {margin: 3, mustNot: []string{"hypothesis-network-failure", "hypothesis-unknown"}},
 	"data-corruption":          {margin: 3, mustNot: []string{"hypothesis-human-error", "hypothesis-unknown"}},
 	"observability-failure":    {margin: 1, mustNot: []string{"hypothesis-human-error", "hypothesis-unknown"}},
-	"external-outage":          {margin: 2, mustNot: []string{"hypothesis-dependency-failure", "hypothesis-unknown"}},
+	"external-outage":          {margin: 2, mustNot: []string{"hypothesis-dependency-failure", "hypothesis-unknown"}, minConf: 15},
+	"certificate-tls-failure":  {margin: 3, mustNot: []string{"hypothesis-unknown"}, minConf: 18},
+	"security-incident":        {margin: 3, mustNot: []string{"hypothesis-unknown"}, minConf: 15},
 	"unknown-novel":            {margin: 0, mustNot: nil},
 }
 
@@ -90,6 +95,9 @@ func enrichExpect(archetypeID string, e expectAll) expectAll {
 	if o, ok := conformanceOverrides[archetypeID]; ok {
 		e.MinLeadMargin = o.margin
 		e.MustNotLead = o.mustNot
+		if o.minConf > 0 {
+			e.MinConfidence = o.minConf
+		}
 	} else {
 		e.MinLeadMargin = 3
 		e.MustNotLead = []string{"hypothesis-unknown"}
@@ -328,14 +336,32 @@ func main() {
 	}
 
 	for _, fx := range defs {
+		path := filepath.Join(outDir, fx.ArchetypeID+".yaml")
+		if skipHandTunedFixture(path) {
+			fmt.Println("skipped (hand_tuned):", path)
+			continue
+		}
 		data, err := yaml.Marshal(fx)
 		if err != nil {
 			panic(err)
 		}
-		path := filepath.Join(outDir, fx.ArchetypeID+".yaml")
 		if err := os.WriteFile(path, data, 0o644); err != nil {
 			panic(err)
 		}
 		fmt.Println("wrote", path)
 	}
+}
+
+func skipHandTunedFixture(path string) bool {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	var meta struct {
+		HandTuned bool `yaml:"hand_tuned"`
+	}
+	if err := yaml.Unmarshal(data, &meta); err != nil {
+		return false
+	}
+	return meta.HandTuned
 }

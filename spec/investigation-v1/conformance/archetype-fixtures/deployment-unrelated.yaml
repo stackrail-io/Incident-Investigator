@@ -30,7 +30,7 @@ evidence_batches:
         summary: Deployed checkout-api v2.4.0 to production after incident began
 expect_after_all_evidence:
     leading_hypothesis_id: hypothesis-deployment-unrelated
-    min_confidence: 10
+    min_confidence: 15
     min_lead_margin: 5
     must_not_lead:
         - hypothesis-deployment-caused

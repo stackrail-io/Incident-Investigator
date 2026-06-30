@@ -30,7 +30,7 @@ evidence_batches:
         summary: Postgres active connections at limit; write IOPS saturated
 expect_after_all_evidence:
     leading_hypothesis_id: hypothesis-database-saturation
-    min_confidence: 10
+    min_confidence: 15
     min_lead_margin: 3
     must_not_lead:
         - hypothesis-dr-failover-failure
