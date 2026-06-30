@@ -1,0 +1,426 @@
+# Investigation Specification v1 — Investigation Archetypes
+#
+# Normative library of vendor-neutral failure-mode archetypes.
+# Implementations map evidence signals to archetypes and competing hypotheses.
+
+openapi: 3.1.0
+info:
+  title: Investigation Spec v1 — Archetypes
+  version: 1.0.0
+  description: >
+    Formal contract for the 30-category incident taxonomy plus supporting
+    archetypes (deployment-unrelated baseline, database lock contention split).
+    Each archetype declares a hypothesis id, expected evidence categories,
+    signal triggers, and a portable conformance fixture.
+
+components:
+  schemas:
+    ArchetypeDomain:
+      type: string
+      description: Library grouping for archetypes.
+      enum:
+        - application
+        - infrastructure
+        - data
+        - platform
+        - operations
+        - security
+        - external
+        - generic
+
+    InvestigationArchetype:
+      type: object
+      required:
+        - id
+        - name
+        - domain
+        - hypothesis_id
+        - priority
+        - conformance_fixture
+      properties:
+        id:
+          type: string
+          description: Stable library identifier (kebab-case).
+        name:
+          type: string
+        domain:
+          $ref: '#/components/schemas/ArchetypeDomain'
+        hypothesis_id:
+          type: string
+          description: Hypothesis id produced when this archetype scores.
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 5
+        taxonomy_rank:
+          type: integer
+          description: Position in the 30-item production taxonomy (1-30); omitted for auxiliary archetypes.
+        signal_triggers:
+          type: array
+          items:
+            type: string
+          description: Keyword signal groups from evidence analysis.
+        expected_evidence:
+          type: array
+          items:
+            $ref: './categories.yaml#/components/schemas/EvidenceCategory'
+        typical_subcauses:
+          type: array
+          items:
+            type: string
+        conformance_fixture:
+          type: string
+          description: >
+            Path (from repo root) to portable YAML conformance scenario.
+            Fixture expect_after_all_evidence may declare min_lead_margin and
+            must_not_lead to assert separation from competing hypotheses.
+        notes:
+          type: string
+
+x-investigation-archetypes:
+  - id: deployment-failure
+    name: Deployment Failure
+    domain: application
+    hypothesis_id: hypothesis-deployment-caused
+    priority: 5
+    taxonomy_rank: 1
+    signal_triggers: [deployment, rollback]
+    expected_evidence: [deployment_events, application_logs, alert_events, metrics]
+    typical_subcauses: [bad code, bad config, wrong image, missing migration]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/deployment-failure.yaml
+
+  - id: deployment-unrelated
+    name: Deployment Unrelated
+    domain: application
+    hypothesis_id: hypothesis-deployment-unrelated
+    priority: 3
+    notes: Competing baseline against deployment-blame bias.
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/deployment-unrelated.yaml
+
+  - id: configuration-drift
+    name: Configuration Drift
+    domain: application
+    hypothesis_id: hypothesis-configuration-change
+    priority: 5
+    taxonomy_rank: 2
+    signal_triggers: [config]
+    expected_evidence: [configuration_changes, deployment_events]
+    typical_subcauses: [configmap change, secret rotation, env var, helm values]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/configuration-drift.yaml
+
+  - id: infrastructure-failure
+    name: Infrastructure Failure
+    domain: infrastructure
+    hypothesis_id: hypothesis-infrastructure-failure
+    priority: 5
+    taxonomy_rank: 3
+    signal_triggers: [infrastructure]
+    expected_evidence: [infrastructure_events, alert_events, metrics]
+    typical_subcauses: [node unavailable, zone failure, hypervisor fault, hardware alert]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/infrastructure-failure.yaml
+
+  - id: database-saturation
+    name: Database Saturation
+    domain: data
+    hypothesis_id: hypothesis-database-saturation
+    priority: 5
+    taxonomy_rank: 4
+    signal_triggers: [database, latency]
+    expected_evidence: [database_events, metrics, application_logs]
+    typical_subcauses: [connection exhaustion, slow queries, replica lag, cpu saturation]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/database-saturation.yaml
+
+  - id: database-lock-contention
+    name: Database Lock Contention
+    domain: data
+    hypothesis_id: hypothesis-lock-contention
+    priority: 5
+    taxonomy_rank: 4
+    signal_triggers: [database]
+    expected_evidence: [database_events, trace_events, configuration_changes, metrics]
+    typical_subcauses: [row lock, long transaction, missing lock_timeout]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/database-lock-contention.yaml
+
+  - id: network-failure
+    name: Network Failure
+    domain: platform
+    hypothesis_id: hypothesis-network-failure
+    priority: 5
+    taxonomy_rank: 5
+    signal_triggers: [network]
+    expected_evidence: [network_events, application_logs]
+    typical_subcauses: [routing, firewall, packet loss, connection refused]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/network-failure.yaml
+
+  - id: dns-failure
+    name: DNS Failure
+    domain: platform
+    hypothesis_id: hypothesis-dns-failure
+    priority: 5
+    taxonomy_rank: 17
+    signal_triggers: [dns]
+    expected_evidence: [network_events, application_logs]
+    typical_subcauses: [resolution failure, wrong record, ttl issue, resolver cache]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/dns-failure.yaml
+
+  - id: certificate-tls-failure
+    name: Certificate / TLS Failure
+    domain: platform
+    hypothesis_id: hypothesis-certificate-expiry
+    priority: 5
+    taxonomy_rank: 6
+    signal_triggers: [cert]
+    expected_evidence: [security_events, application_logs, network_events]
+    typical_subcauses: [expired certificate, wrong certificate, ca change, trust issue]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/certificate-tls-failure.yaml
+
+  - id: auth-failure
+    name: Authentication / Authorization Failure
+    domain: platform
+    hypothesis_id: hypothesis-auth-failure
+    priority: 4
+    taxonomy_rank: 7
+    signal_triggers: [auth]
+    expected_evidence: [security_events, application_logs, alert_events]
+    typical_subcauses: [expired token, permission change, identity provider outage]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/auth-failure.yaml
+
+  - id: resource-exhaustion
+    name: Resource Exhaustion
+    domain: infrastructure
+    hypothesis_id: hypothesis-resource-exhaustion
+    priority: 5
+    taxonomy_rank: 8
+    signal_triggers: [memory, restart]
+    expected_evidence: [metrics, infrastructure_events, application_logs]
+    typical_subcauses: [memory leak, oom, cpu saturation, disk full]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/resource-exhaustion.yaml
+
+  - id: performance-regression
+    name: Performance Regression
+    domain: application
+    hypothesis_id: hypothesis-performance-regression
+    priority: 5
+    taxonomy_rank: 9
+    signal_triggers: [performance, latency]
+    expected_evidence: [metrics, trace_events, application_logs]
+    typical_subcauses: [code regression, hot path, lock contention, gc pause]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/performance-regression.yaml
+
+  - id: dependency-failure
+    name: Dependency Failure
+    domain: operations
+    hypothesis_id: hypothesis-dependency-failure
+    priority: 5
+    taxonomy_rank: 10
+    signal_triggers: [dependency]
+    expected_evidence: [application_logs, trace_events, metrics, alert_events]
+    typical_subcauses: [downstream timeout, service unavailable, circuit open]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/dependency-failure.yaml
+
+  - id: retry-storm
+    name: Retry Storm / Cascading Failure
+    domain: operations
+    hypothesis_id: hypothesis-retry-storm
+    priority: 5
+    taxonomy_rank: 11
+    signal_triggers: [retry, latency]
+    expected_evidence: [application_logs, metrics, trace_events]
+    typical_subcauses: [aggressive retries, missing circuit breaker, thundering herd]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/retry-storm.yaml
+
+  - id: kubernetes-failure
+    name: Kubernetes Failure
+    domain: platform
+    hypothesis_id: hypothesis-kubernetes-failure
+    priority: 5
+    taxonomy_rank: 12
+    signal_triggers: [kubernetes, restart]
+    expected_evidence: [infrastructure_events, application_logs, alert_events]
+    typical_subcauses: [crashloop, eviction, scheduling failure, readiness probe]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/kubernetes-failure.yaml
+
+  - id: container-failure
+    name: Container Failure
+    domain: platform
+    hypothesis_id: hypothesis-container-failure
+    priority: 4
+    taxonomy_rank: 13
+    signal_triggers: [container]
+    expected_evidence: [infrastructure_events, application_logs]
+    typical_subcauses: [image pull failed, wrong image, oci runtime error]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/container-failure.yaml
+
+  - id: storage-failure
+    name: Storage Failure
+    domain: infrastructure
+    hypothesis_id: hypothesis-storage-failure
+    priority: 4
+    taxonomy_rank: 14
+    signal_triggers: [storage]
+    expected_evidence: [infrastructure_events, metrics, alert_events]
+    typical_subcauses: [disk full, mount failed, io latency, ebs unavailable]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/storage-failure.yaml
+
+  - id: cache-failure
+    name: Cache Failure
+    domain: data
+    hypothesis_id: hypothesis-cache-failure
+    priority: 4
+    taxonomy_rank: 15
+    signal_triggers: [cache]
+    expected_evidence: [metrics, application_logs, alert_events]
+    typical_subcauses: [cache unavailable, cache stampede, memory pressure]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/cache-failure.yaml
+
+  - id: messaging-failure
+    name: Messaging Failure
+    domain: operations
+    hypothesis_id: hypothesis-messaging-failure
+    priority: 4
+    taxonomy_rank: 16
+    signal_triggers: [messaging]
+    expected_evidence: [application_logs, metrics, trace_events]
+    typical_subcauses: [consumer lag, queue buildup, poison message]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/messaging-failure.yaml
+
+  - id: load-balancer-failure
+    name: Load Balancer / Proxy Failure
+    domain: platform
+    hypothesis_id: hypothesis-load-balancer-failure
+    priority: 4
+    taxonomy_rank: 18
+    signal_triggers: [loadbalancer]
+    expected_evidence: [network_events, application_logs, metrics]
+    typical_subcauses: [health check failed, routing misconfiguration, tls termination]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/load-balancer-failure.yaml
+
+  - id: api-contract-failure
+    name: API Contract Failure
+    domain: application
+    hypothesis_id: hypothesis-api-contract-failure
+    priority: 4
+    taxonomy_rank: 19
+    signal_triggers: [apicontract]
+    expected_evidence: [application_logs, trace_events, deployment_events]
+    typical_subcauses: [breaking change, version mismatch, serialization error]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/api-contract-failure.yaml
+
+  - id: data-corruption
+    name: Data Corruption
+    domain: data
+    hypothesis_id: hypothesis-data-corruption
+    priority: 4
+    taxonomy_rank: 20
+    signal_triggers: [datacorruption]
+    expected_evidence: [database_events, application_logs, human_context]
+    typical_subcauses: [partial write, checksum mismatch, migration bug]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/data-corruption.yaml
+
+  - id: clock-failure
+    name: Clock / Time Failure
+    domain: platform
+    hypothesis_id: hypothesis-clock-failure
+    priority: 3
+    taxonomy_rank: 21
+    signal_triggers: [clock]
+    expected_evidence: [infrastructure_events, security_events, application_logs]
+    typical_subcauses: [clock drift, ntp failure, token validation skew]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/clock-failure.yaml
+
+  - id: feature-flag-failure
+    name: Feature Flag Failure
+    domain: application
+    hypothesis_id: hypothesis-feature-flag-failure
+    priority: 4
+    taxonomy_rank: 22
+    signal_triggers: [featureflag]
+    expected_evidence: [configuration_changes, deployment_events, application_logs]
+    typical_subcauses: [flag enabled for wrong audience, gradual rollout bug]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/feature-flag-failure.yaml
+
+  - id: security-incident
+    name: Security Incident
+    domain: security
+    hypothesis_id: hypothesis-security-incident
+    priority: 5
+    taxonomy_rank: 23
+    signal_triggers: [security]
+    expected_evidence: [security_events, application_logs, human_context]
+    typical_subcauses: [credential compromise, unauthorized access, exploit]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/security-incident.yaml
+
+  - id: external-outage
+    name: External Service Outage
+    domain: external
+    hypothesis_id: hypothesis-external-outage
+    priority: 5
+    taxonomy_rank: 24
+    signal_triggers: [external]
+    expected_evidence: [application_logs, network_events, alert_events]
+    typical_subcauses: [vendor outage, regional provider failure, api unavailable]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/external-outage.yaml
+
+  - id: regional-failure
+    name: Regional / Availability Zone Failure
+    domain: infrastructure
+    hypothesis_id: hypothesis-regional-failure
+    priority: 4
+    taxonomy_rank: 25
+    signal_triggers: [regional]
+    expected_evidence: [infrastructure_events, network_events, metrics]
+    typical_subcauses: [az failure, single-region dependency, capacity loss]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/regional-failure.yaml
+
+  - id: dr-failover-failure
+    name: Disaster Recovery / Failover Failure
+    domain: operations
+    hypothesis_id: hypothesis-dr-failover-failure
+    priority: 3
+    taxonomy_rank: 26
+    signal_triggers: [dr]
+    expected_evidence: [infrastructure_events, database_events, application_logs]
+    typical_subcauses: [failover incomplete, split brain, replication lag]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/dr-failover-failure.yaml
+
+  - id: observability-failure
+    name: Observability Failure
+    domain: operations
+    hypothesis_id: hypothesis-observability-failure
+    priority: 3
+    taxonomy_rank: 27
+    signal_triggers: [observability]
+    expected_evidence: [human_context, application_logs, metrics]
+    typical_subcauses: [agent failure, sampling gap, missing logs]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/observability-failure.yaml
+
+  - id: human-error
+    name: Human / Operational Error
+    domain: application
+    hypothesis_id: hypothesis-human-error
+    priority: 5
+    taxonomy_rank: 28
+    signal_triggers: [human]
+    expected_evidence: [human_context, configuration_changes, application_logs]
+    typical_subcauses: [manual change, wrong procedure, runbook skipped]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/human-error.yaml
+
+  - id: capacity-planning
+    name: Capacity Planning Failure
+    domain: operations
+    hypothesis_id: hypothesis-capacity-planning
+    priority: 4
+    taxonomy_rank: 29
+    signal_triggers: [capacity, latency]
+    expected_evidence: [metrics, infrastructure_events, alert_events]
+    typical_subcauses: [traffic spike, autoscaling delayed, quota exceeded]
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/capacity-planning.yaml
+
+  - id: unknown-novel
+    name: Unknown / Novel Failure
+    domain: generic
+    hypothesis_id: hypothesis-unknown
+    priority: 5
+    taxonomy_rank: 30
+    notes: Catch-all; confidence fades as evidence coverage grows.
+    conformance_fixture: spec/investigation-v1/conformance/archetype-fixtures/unknown-novel.yaml

@@ -147,8 +147,32 @@ Run portable conformance fixtures:
 go test ./internal/spec/...
 ```
 
-Fixtures live in [`conformance/fixtures/`](conformance/fixtures/) — transport-agnostic
-JSON scenarios any implementation can replay.
+Archetype scenarios live in [`spec/investigation-v1/conformance/archetype-fixtures/`](spec/investigation-v1/conformance/archetype-fixtures/) — one YAML file per archetype, declared in [`archetypes.yaml`](spec/investigation-v1/archetypes.yaml). The reference implementation loads the same files via `internal/fixtures` for engine and runtime tests.
+
+### Archetype library
+
+The built-in failure-mode library is defined in [`spec/investigation-v1/archetypes.yaml`](spec/investigation-v1/archetypes.yaml). Each entry maps to:
+
+- a **library id** (e.g. `deployment-failure`)
+- a **hypothesis id** scored by the runtime (e.g. `hypothesis-deployment-caused`)
+- a **portable conformance fixture** (YAML) replayed by `go test ./internal/spec/...`
+
+Regenerate archetype fixtures after editing templates:
+
+```bash
+go run internal/spec/cmd/gen-archetype-fixtures/main.go
+```
+
+Custom archetypes implement `archetype.Archetype` and call `Registry.Register()` — see `internal/archetype/builtin/`.
+
+A future `list_archetypes` MCP tool may expose the library at runtime; until then, use [`spec/investigation-v1/archetypes.yaml`](spec/investigation-v1/archetypes.yaml) as the contract.
+
+#### Hypothesis ID migration
+
+| Removed / old | Replacement | When to use |
+| ------------- | ----------- | ----------- |
+| `hypothesis-network-dns` | `hypothesis-dns-failure` | DNS / NXDOMAIN / name resolution symptoms |
+| `hypothesis-network-dns` | `hypothesis-network-failure` | Routing, packet loss, connection refused (no DNS) |
 
 ```
 Investigation Runtime
@@ -728,7 +752,7 @@ on the abstract signals extracted from evidence (`internal/engine/signals.go`):
 ## Project layout
 
 ```
-internal/spec/                     Spec v1 conformance tests (portable JSON fixtures)
+internal/spec/                     Spec v1 conformance tests (YAML archetype fixtures)
 spec/investigation-v1/            Investigation Specification v1 (OpenAPI-style schemas)
 cmd/incident-investigator/        MCP server entrypoint (stdio)
 plugins/incident-investigator/    Claude Code + Codex plugin bundle
@@ -748,19 +772,24 @@ internal/fixtures/                Realistic incident scenarios used by tests
 
 ## Testing
 
-Realistic incident fixtures (`internal/fixtures`) validate the planner, investigation
-graph, timeline, hypotheses, and confidence end to end. The intelligence corpus
+Realistic incident fixtures (`internal/fixtures`) load from `spec/investigation-v1/conformance/archetype-fixtures/` and validate the planner, investigation
+graph, timeline, hypotheses, and confidence end to end across all 32 archetypes. The intelligence corpus
 (`internal/intelligence/fixtures`, 56 completed snapshots) validates similarity
 search, pattern extraction, confidence calibration, knowledge reuse, and false-positive
 filtering.
 
-- Bad deployment
-- Database outage
-- Certificate expiry
-- DNS outage
-- Kubernetes restart loop
-- Memory leak
-- Retry storm
+- Bad deployment (`deployment-failure`)
+- Database saturation (`database-saturation`)
+- Database lock contention (`database-lock-contention`)
+- Certificate expiry (`certificate-tls-failure`)
+- DNS failure (`dns-failure`)
+- Configuration drift (`configuration-drift`)
+- Kubernetes failure (`kubernetes-failure`)
+- Resource exhaustion (`resource-exhaustion`)
+- Retry storm (`retry-storm`)
+- Dependency failure (`dependency-failure`)
+- External outage (`external-outage`)
+- …plus 22 additional archetype scenarios (see `archetypes.yaml`)
 
 ```bash
 go test ./...

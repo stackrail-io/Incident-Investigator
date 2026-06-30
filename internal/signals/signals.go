@@ -15,7 +15,7 @@ var Keywords = map[string][]string{
 	"rollback":   {"rollback", "rolled back", "reverted", "roll back"},
 	"recovery":   {"back to normal", "service recovered", "incident resolved", "fully restored"},
 	"database":   {"database", "postgres", "mysql", "sql", "connection pool", "db connection", "query timeout", "deadlock", "replica", "saturat"},
-	"config":     {"config", "configuration", "env var", "environment variable", "feature flag", "secret", "parameter"},
+	"config":     {"config", "configuration", "env var", "environment variable", "secret", "parameter", "configmap"},
 	"dns":        {"dns", "name resolution", "nxdomain", "resolve host", "could not resolve"},
 	"network":    {"network", "packet loss", "connection refused", "connection reset", "unreachable", "tcp", "socket"},
 	"cert":       {"certificate", "tls", "ssl", "x509", "handshake", "expired cert"},
@@ -30,7 +30,21 @@ var Keywords = map[string][]string{
 	"human":      {"manual", "operator", "runbook", "human error", "mistake", "wrong command", "manual change"},
 	"capacity":   {"autoscaling", "auto-scaling", "traffic spike", "quota exceeded", "scaling delayed", "throttl"},
 	"security":   {"unauthorized access", "breach", "compromise", "exploit", "intrusion", "credential leak"},
-	"performance": {"regression", "latency regression", "slower than baseline", "performance degraded"},
+	"performance":  {"regression", "latency regression", "slower than baseline", "performance degraded"},
+	"infrastructure": {"hypervisor", "cloud event", "node unavailable", "node failure", "hardware alert", "instance reboot", "host failure", "bare metal"},
+	"kubernetes":     {"kubernetes", "k8s", "kubelet", "scheduler", "readiness probe", "liveness probe", "pending pod", "replicaset"},
+	"container":      {"container", "docker", "oci runtime", "image pull", "pull image", "registry unreachable", "containerd"},
+	"storage":        {"storage", "ebs", "pvc", "disk full", "mount failed", "iops", "san", "nas", "volume attach"},
+	"cache":          {"redis", "memcached", "cache miss", "cache stampede", "hit ratio", "cache unavailable", "cache eviction"},
+	"messaging":      {"kafka", "rabbitmq", "sqs", "pulsar", "consumer lag", "queue buildup", "poison message", "message queue"},
+	"loadbalancer":   {"load balancer", "envoy", "nginx", "alb", "haproxy", "proxy failure", "health check failed", "backend unhealthy"},
+	"apicontract":    {"schema change", "breaking change", "version mismatch", "serialization error", "deserialization", "invalid payload"},
+	"datacorruption": {"corruption", "checksum mismatch", "partial write", "data integrity", "corrupted data"},
+	"clock":          {"ntp", "clock drift", "time skew", "skewed clock", "time sync"},
+	"featureflag":    {"feature flag", "flag rollout", "flag enabled", "launchdarkly", "gradual rollout", "flag disabled"},
+	"regional":       {"availability zone", "az failure", "zone failure", "region outage", "regional failure", "single region"},
+	"dr":             {"failover", "disaster recovery", "split brain", "dr drill", "recovery incomplete", "failover failed"},
+	"observability":  {"missing metrics", "missing logs", "missing traces", "blind spot", "agent down", "observability gap", "sampling dropped"},
 }
 
 // LockContention captures vendor-neutral signals of row/table lock waiting.
@@ -82,7 +96,10 @@ func Analyze(s *model.Session) Signals {
 		}
 
 		isRecovery := MatchesAny(text, Keywords["rollback"]) || MatchesAny(text, Keywords["recovery"])
-		isDeploy := !isRecovery && (e.Category == model.CategoryDeploymentEvents || MatchesAny(text, Keywords["deployment"]))
+		isDeploy := !isRecovery && e.Category == model.CategoryDeploymentEvents
+		if !isDeploy && e.Category != model.CategoryConfigurationChanges {
+			isDeploy = MatchesAny(text, Keywords["deployment"])
+		}
 
 		if isDeploy && sig.FirstDeployment == nil {
 			sig.FirstDeployment = e

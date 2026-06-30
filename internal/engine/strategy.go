@@ -125,11 +125,15 @@ func categorySupportsHypothesis(cat model.Category, hypID string) bool {
 	switch hypID {
 	case "hypothesis-deployment-caused", "hypothesis-deployment-unrelated":
 		return cat == model.CategoryDeploymentEvents || cat == model.CategoryConfigurationChanges
+	case "hypothesis-configuration-change":
+		return cat == model.CategoryConfigurationChanges || cat == model.CategoryApplicationLogs
 	case "hypothesis-database-saturation":
 		return cat == model.CategoryDatabaseEvents || cat == model.CategoryMetrics
 	case "hypothesis-lock-contention":
 		return cat == model.CategoryDatabaseEvents || cat == model.CategoryTraceEvents || cat == model.CategoryConfigurationChanges
-	case "hypothesis-network-dns":
+	case "hypothesis-network-failure":
+		return cat == model.CategoryNetworkEvents
+	case "hypothesis-dns-failure":
 		return cat == model.CategoryNetworkEvents
 	case "hypothesis-certificate-expiry":
 		return cat == model.CategorySecurityEvents
@@ -151,6 +155,34 @@ func categorySupportsHypothesis(cat model.Category, hypID string) bool {
 		return cat == model.CategoryMetrics || cat == model.CategoryInfrastructureEvents
 	case "hypothesis-security-incident":
 		return cat == model.CategorySecurityEvents || cat == model.CategoryHumanContext
+	case "hypothesis-infrastructure-failure":
+		return cat == model.CategoryInfrastructureEvents || cat == model.CategoryAlertEvents
+	case "hypothesis-kubernetes-failure":
+		return cat == model.CategoryInfrastructureEvents || cat == model.CategoryApplicationLogs
+	case "hypothesis-container-failure":
+		return cat == model.CategoryInfrastructureEvents || cat == model.CategoryApplicationLogs
+	case "hypothesis-storage-failure":
+		return cat == model.CategoryInfrastructureEvents || cat == model.CategoryMetrics
+	case "hypothesis-cache-failure":
+		return cat == model.CategoryMetrics || cat == model.CategoryApplicationLogs
+	case "hypothesis-messaging-failure":
+		return cat == model.CategoryApplicationLogs || cat == model.CategoryMetrics
+	case "hypothesis-load-balancer-failure":
+		return cat == model.CategoryNetworkEvents || cat == model.CategoryApplicationLogs
+	case "hypothesis-api-contract-failure":
+		return cat == model.CategoryApplicationLogs || cat == model.CategoryDeploymentEvents
+	case "hypothesis-data-corruption":
+		return cat == model.CategoryDatabaseEvents || cat == model.CategoryApplicationLogs
+	case "hypothesis-clock-failure":
+		return cat == model.CategoryInfrastructureEvents || cat == model.CategorySecurityEvents
+	case "hypothesis-feature-flag-failure":
+		return cat == model.CategoryConfigurationChanges
+	case "hypothesis-regional-failure":
+		return cat == model.CategoryInfrastructureEvents || cat == model.CategoryNetworkEvents
+	case "hypothesis-dr-failover-failure":
+		return cat == model.CategoryInfrastructureEvents || cat == model.CategoryDatabaseEvents
+	case "hypothesis-observability-failure":
+		return cat == model.CategoryHumanContext || cat == model.CategoryApplicationLogs
 	default:
 		return false
 	}

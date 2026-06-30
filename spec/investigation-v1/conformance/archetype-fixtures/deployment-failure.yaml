@@ -1,0 +1,56 @@
+archetype_id: deployment-failure
+scenario_id: SC-ARCH-001
+tier: core
+description: Deployment precedes error spike; rollback restores service.
+start:
+    question: Why did checkout fail yesterday?
+    service: checkout-api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: dep-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: deployment_events
+        entity: checkout-api
+        summary: Deployed checkout-api v2.4.0 to production
+    - - id: log-1
+        timestamp: "2026-06-27T09:05:00Z"
+        category: application_logs
+        entity: checkout-api
+        summary: HTTP 500 errors spiking on /checkout endpoint
+      - id: alert-1
+        timestamp: "2026-06-27T09:06:00Z"
+        category: alert_events
+        entity: checkout-api
+        summary: 'Alert: checkout-api 5xx error rate exceeded 5%'
+    - - id: metric-1
+        timestamp: "2026-06-27T09:07:00Z"
+        category: metrics
+        entity: checkout-api
+        summary: error_rate 12%, p99 latency 4s
+      - id: dep-2
+        timestamp: "2026-06-27T09:18:00Z"
+        category: deployment_events
+        entity: checkout-api
+        summary: Rolled back checkout-api to v2.3.9; service recovered
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-deployment-caused
+    min_confidence: 20
+    min_lead_margin: 5
+    must_not_lead:
+        - hypothesis-unknown
+        - hypothesis-deployment-unrelated
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

@@ -1,0 +1,45 @@
+archetype_id: deployment-unrelated
+scenario_id: SC-ARCH-002
+tier: core
+description: Symptoms begin before deployment lands.
+start:
+    question: Was the deployment the cause?
+    service: checkout-api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: alert-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: alert_events
+        entity: checkout-api
+        summary: 'Alert: checkout-api 5xx error rate exceeded 5%'
+      - id: log-1
+        timestamp: "2026-06-27T09:02:00Z"
+        category: application_logs
+        entity: checkout-api
+        summary: HTTP 500 errors spiking on /checkout endpoint
+    - - id: dep-1
+        timestamp: "2026-06-27T09:15:00Z"
+        category: deployment_events
+        entity: checkout-api
+        summary: Deployed checkout-api v2.4.0 to production after incident began
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-deployment-unrelated
+    min_confidence: 15
+    min_lead_margin: 5
+    must_not_lead:
+        - hypothesis-deployment-caused
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

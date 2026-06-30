@@ -1,0 +1,40 @@
+archetype_id: capacity-planning
+scenario_id: SC-ARCH-031
+tier: core
+description: Traffic spike exceeded capacity.
+start:
+    question: Why did latency spike during the sale?
+    service: shop-api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: metric-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: metrics
+        entity: shop-api
+        summary: traffic spike 5x; autoscaling delayed; quota exceeded
+    - - id: infra-1
+        timestamp: "2026-06-27T09:02:00Z"
+        category: infrastructure_events
+        entity: shop-api
+        summary: capacity throttling under load
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-capacity-planning
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

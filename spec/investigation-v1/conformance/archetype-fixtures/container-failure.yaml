@@ -1,0 +1,40 @@
+archetype_id: container-failure
+scenario_id: SC-ARCH-016
+tier: core
+description: Container image pull failure.
+start:
+    question: Why won't the pod start?
+    service: api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: infra-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: infrastructure_events
+        entity: api
+        summary: docker image pull failed; registry unreachable
+    - - id: log-1
+        timestamp: "2026-06-27T09:02:00Z"
+        category: application_logs
+        entity: api
+        summary: 'oci runtime error: failed to pull image from containerd'
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-container-failure
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

@@ -1,0 +1,41 @@
+archetype_id: data-corruption
+scenario_id: SC-ARCH-022
+tier: core
+description: Data integrity failure.
+start:
+    question: Why is data inconsistent?
+    service: ledger-api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: log-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: application_logs
+        entity: ledger-api
+        summary: checksum mismatch detected; corrupted data on ledger shard
+    - - id: log-2
+        timestamp: "2026-06-27T09:02:00Z"
+        category: application_logs
+        entity: ledger-api
+        summary: partial write failed data integrity validation; checksum mismatch on commit
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-data-corruption
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-human-error
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

@@ -1,0 +1,41 @@
+archetype_id: feature-flag-failure
+scenario_id: SC-ARCH-024
+tier: core
+description: Feature flag rollout mistake.
+start:
+    question: Why did behavior change for some users?
+    service: web-app
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: cfg-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: configuration_changes
+        entity: web-app
+        summary: feature flag rollout enabled via launchdarkly for wrong audience
+    - - id: log-1
+        timestamp: "2026-06-27T09:02:00Z"
+        category: application_logs
+        entity: web-app
+        summary: gradual rollout flag enabled caused regression for 50% traffic
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-feature-flag-failure
+    min_confidence: 10
+    min_lead_margin: 3
+    must_not_lead:
+        - hypothesis-configuration-change
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem

@@ -9,11 +9,11 @@ import (
 // DeploymentCaused scores deployment-before-symptom signatures.
 type DeploymentCaused struct{}
 
-func (DeploymentCaused) ID() string           { return "deployment-failure" }
-func (DeploymentCaused) Name() string         { return "Deployment Failure" }
+func (DeploymentCaused) ID() string               { return "deployment-failure" }
+func (DeploymentCaused) Name() string             { return "Deployment Failure" }
 func (DeploymentCaused) Domain() archetype.Domain { return archetype.DomainApplication }
-func (DeploymentCaused) Priority() int        { return 5 }
-func (DeploymentCaused) HypothesisID() string { return "hypothesis-deployment-caused" }
+func (DeploymentCaused) Priority() int            { return 5 }
+func (DeploymentCaused) HypothesisID() string     { return "hypothesis-deployment-caused" }
 func (DeploymentCaused) Applicable(ctx archetype.ScoreContext) bool {
 	return alwaysApplicable(ctx)
 }
@@ -64,47 +64,57 @@ func (a DeploymentCaused) Score(ctx archetype.ScoreContext) archetype.Candidate 
 	return c
 }
 
-// DeploymentUnrelated competes against deployment-blame bias.
-type DeploymentUnrelated struct{}
-
-func (DeploymentUnrelated) ID() string           { return "deployment-unrelated" }
-func (DeploymentUnrelated) Name() string         { return "Deployment Unrelated" }
-func (DeploymentUnrelated) Domain() archetype.Domain { return archetype.DomainApplication }
-func (DeploymentUnrelated) Priority() int      { return 3 }
-func (DeploymentUnrelated) HypothesisID() string { return "hypothesis-deployment-unrelated" }
-func (DeploymentUnrelated) Applicable(ctx archetype.ScoreContext) bool {
-	return alwaysApplicable(ctx)
-}
-func (DeploymentUnrelated) ExpectedEvidence() []model.Category {
-	return []model.Category{model.CategoryDeploymentEvents, model.CategoryAlertEvents}
-}
-func (DeploymentUnrelated) TypicalSubcauses() []string { return nil }
-func (a DeploymentUnrelated) Score(ctx archetype.ScoreContext) archetype.Candidate {
-	sig := ctx.Signals
-	c := archetype.Candidate{
-		HypothesisID: a.HypothesisID(),
-		Statement:    "The deployment was unrelated; the incident has another root cause.",
-		Score:        8,
-		Rationale:    "Maintained as a competing baseline against deployment-blame bias.",
+func (DeploymentCaused) SeedQuestions() []archetype.QuestionSeed {
+	return []archetype.QuestionSeed{
+		{
+			ID: "deploy-before-errors", Priority: 85,
+			Title:       "Did deployment happen before errors?",
+			Description: "Establish temporal ordering between the most recent deployment and the first symptom.",
+			Requires: []model.Category{
+				model.CategoryDeploymentEvents, model.CategoryApplicationLogs, model.CategoryAlertEvents,
+			},
+			Effects: []archetype.QuestionEffect{
+				effect(true, archetype.EffectIncrease, "hypothesis-deployment-caused", 25),
+				effect(false, archetype.EffectDecrease, "hypothesis-deployment-caused", 40),
+				effect(false, archetype.EffectIncrease, "hypothesis-deployment-unrelated", 20),
+			},
+		},
+		{
+			ID: "deploy-after-incident", Priority: 80,
+			Title:       "Did deployment occur after incident onset?",
+			Description: "A deployment that lands after symptoms began contradicts deploy-caused theories.",
+			Requires: []model.Category{
+				model.CategoryDeploymentEvents, model.CategoryAlertEvents, model.CategoryApplicationLogs,
+			},
+			DependsOn: []string{"deploy-before-errors"},
+			Effects: []archetype.QuestionEffect{
+				effect(true, archetype.EffectIncrease, "hypothesis-deployment-unrelated", 30),
+				effect(false, archetype.EffectDecrease, "hypothesis-deployment-unrelated", 15),
+				effect(true, archetype.EffectDecrease, "hypothesis-deployment-caused", 35),
+			},
+		},
+		{
+			ID: "rollback-restored-service", Priority: 75,
+			Title:       "Did rollback restore service?",
+			Description: "Recovery immediately after rollback strongly implicates the preceding deployment.",
+			Requires:    []model.Category{model.CategoryDeploymentEvents, model.CategoryMetrics},
+			DependsOn:   []string{"deploy-before-errors"},
+			Effects: []archetype.QuestionEffect{
+				effect(true, archetype.EffectIncrease, "hypothesis-deployment-caused", 15),
+				effect(false, archetype.EffectDecrease, "hypothesis-deployment-caused", 20),
+			},
+		},
 	}
-	if ctx.DeployContradicted() {
-		c.Score += 40
-		c.Rationale = "The deployment timestamp falls after the incident began."
-	}
-	if sig.FirstDeployment == nil {
-		c.Score = 0
-	}
-	return c
 }
 
 // ConfigurationChange scores config and feature-flag changes.
 type ConfigurationChange struct{}
 
-func (ConfigurationChange) ID() string           { return "configuration-drift" }
-func (ConfigurationChange) Name() string         { return "Configuration Drift" }
+func (ConfigurationChange) ID() string               { return "configuration-drift" }
+func (ConfigurationChange) Name() string             { return "Configuration Drift" }
 func (ConfigurationChange) Domain() archetype.Domain { return archetype.DomainApplication }
-func (ConfigurationChange) Priority() int        { return 5 }
-func (ConfigurationChange) HypothesisID() string { return "hypothesis-configuration-change" }
+func (ConfigurationChange) Priority() int            { return 5 }
+func (ConfigurationChange) HypothesisID() string     { return "hypothesis-configuration-change" }
 func (ConfigurationChange) Applicable(ctx archetype.ScoreContext) bool {
 	return alwaysApplicable(ctx)
 }
@@ -121,7 +131,7 @@ func (a ConfigurationChange) Score(ctx archetype.ScoreContext) archetype.Candida
 		HypothesisID: a.HypothesisID(),
 		Statement:    "A configuration or feature-flag change triggered the incident.",
 	}
-	if sig.Keywords["config"] {
+	if sig.Keywords["config"] && !sig.Keywords["featureflag"] {
 		c.Score += 30
 		c.Rationale = "Configuration-change symptoms appear in the evidence."
 		c.Support = append(c.Support, sigpkg.EvidenceMatching(s, func(e *model.Evidence) bool {
@@ -129,183 +139,227 @@ func (a ConfigurationChange) Score(ctx archetype.ScoreContext) archetype.Candida
 				sigpkg.MatchesAny(sigpkg.Haystack(e), sigpkg.Keywords["config"])
 		})...)
 	}
-	return c
-}
-
-// NetworkDNS scores network and DNS connectivity failures.
-type NetworkDNS struct{}
-
-func (NetworkDNS) ID() string           { return "network-failure" }
-func (NetworkDNS) Name() string         { return "Network / DNS Failure" }
-func (NetworkDNS) Domain() archetype.Domain { return archetype.DomainPlatform }
-func (NetworkDNS) Priority() int        { return 5 }
-func (NetworkDNS) HypothesisID() string { return "hypothesis-network-dns" }
-func (NetworkDNS) Applicable(ctx archetype.ScoreContext) bool {
-	return alwaysApplicable(ctx)
-}
-func (NetworkDNS) ExpectedEvidence() []model.Category {
-	return []model.Category{model.CategoryNetworkEvents, model.CategoryApplicationLogs}
-}
-func (NetworkDNS) TypicalSubcauses() []string {
-	return []string{"dns resolution", "routing", "firewall", "packet loss", "load balancer"}
-}
-func (a NetworkDNS) Score(ctx archetype.ScoreContext) archetype.Candidate {
-	sig := ctx.Signals
-	s := ctx.Session
-	c := archetype.Candidate{
-		HypothesisID: a.HypothesisID(),
-		Statement:    "A network or DNS failure disrupted connectivity.",
-	}
-	if sig.Keywords["dns"] {
-		c.Score += 38
-		c.Rationale = "DNS resolution symptoms appear in the evidence."
-	}
-	if sig.Keywords["network"] {
-		c.Score += 18
+	if s.HasCategory(model.CategoryConfigurationChanges) && !sig.Keywords["kubernetes"] {
+		c.Score += 12
 		if c.Rationale == "" {
-			c.Rationale = "Network connectivity symptoms appear in the evidence."
+			c.Rationale = "A configuration change was recorded before symptoms appeared."
 		}
 	}
-	if c.Score > 0 {
-		c.Support = append(c.Support, sigpkg.EvidenceMatching(s, func(e *model.Evidence) bool {
-			t := sigpkg.Haystack(e)
-			return sigpkg.MatchesAny(t, sigpkg.Keywords["dns"]) || sigpkg.MatchesAny(t, sigpkg.Keywords["network"])
-		})...)
+	if sig.Keywords["kubernetes"] {
+		c.Score -= 20
+		if c.Score < 0 {
+			c.Score = 0
+		}
 	}
 	return c
 }
 
-// CertificateExpiry scores TLS and certificate failures.
-type CertificateExpiry struct{}
+func (ConfigurationChange) SeedQuestions() []archetype.QuestionSeed {
+	return []archetype.QuestionSeed{
+		{
+			ID: "config-changed", Priority: 70,
+			Title:       "Was configuration changed?",
+			Description: "Feature flags, env vars, and connection-pool settings are common incident triggers.",
+			Requires:      []model.Category{model.CategoryConfigurationChanges, model.CategoryDeploymentEvents},
+			TriggerSignal: "config",
+			Generates:     []string{"pods-restarted"},
+			Effects: []archetype.QuestionEffect{
+				effect(true, archetype.EffectIncrease, "hypothesis-configuration-change", 30),
+				effect(false, archetype.EffectDecrease, "hypothesis-configuration-change", 15),
+			},
+		},
+	}
+}
 
-func (CertificateExpiry) ID() string           { return "certificate-tls-failure" }
-func (CertificateExpiry) Name() string         { return "Certificate / TLS Failure" }
-func (CertificateExpiry) Domain() archetype.Domain { return archetype.DomainPlatform }
-func (CertificateExpiry) Priority() int        { return 5 }
-func (CertificateExpiry) HypothesisID() string { return "hypothesis-certificate-expiry" }
-func (CertificateExpiry) Applicable(ctx archetype.ScoreContext) bool {
+// PerformanceRegression scores latency or throughput regression without saturation.
+type PerformanceRegression struct{}
+
+func (PerformanceRegression) ID() string               { return "performance-regression" }
+func (PerformanceRegression) Name() string             { return "Performance Regression" }
+func (PerformanceRegression) Domain() archetype.Domain { return archetype.DomainApplication }
+func (PerformanceRegression) Priority() int            { return 5 }
+func (PerformanceRegression) HypothesisID() string     { return "hypothesis-performance-regression" }
+func (PerformanceRegression) Applicable(ctx archetype.ScoreContext) bool {
 	return alwaysApplicable(ctx)
 }
-func (CertificateExpiry) ExpectedEvidence() []model.Category {
-	return []model.Category{model.CategorySecurityEvents, model.CategoryApplicationLogs, model.CategoryNetworkEvents}
+func (PerformanceRegression) ExpectedEvidence() []model.Category {
+	return []model.Category{model.CategoryMetrics, model.CategoryTraceEvents, model.CategoryApplicationLogs}
 }
-func (CertificateExpiry) TypicalSubcauses() []string {
-	return []string{"expired certificate", "wrong certificate", "ca change", "trust issue"}
+func (PerformanceRegression) TypicalSubcauses() []string {
+	return []string{"code regression", "hot path", "lock contention", "gc pause", "inefficient query"}
 }
-func (a CertificateExpiry) Score(ctx archetype.ScoreContext) archetype.Candidate {
+func (a PerformanceRegression) Score(ctx archetype.ScoreContext) archetype.Candidate {
 	sig := ctx.Signals
 	s := ctx.Session
 	c := archetype.Candidate{
 		HypothesisID: a.HypothesisID(),
-		Statement:    "An expired or invalid TLS certificate broke secure connections.",
+		Statement:    "A performance regression degraded latency or throughput.",
 	}
-	if sig.Keywords["cert"] {
-		c.Score += 48
-		c.Rationale = "TLS/certificate symptoms appear in the evidence."
+	if sig.Keywords["performance"] {
+		c.Score += 36
+		c.Rationale = "Performance regression symptoms appear in the evidence."
 		c.Support = append(c.Support, sigpkg.EvidenceMatching(s, func(e *model.Evidence) bool {
-			return sigpkg.MatchesAny(sigpkg.Haystack(e), sigpkg.Keywords["cert"])
+			return sigpkg.MatchesAny(sigpkg.Haystack(e), sigpkg.Keywords["performance"])
 		})...)
+	}
+	if sig.Keywords["latency"] && s.HasCategory(model.CategoryMetrics) && !sig.Keywords["database"] && !sig.Keywords["retry"] {
+		c.Score += 22
+		if c.Rationale == "" {
+			c.Rationale = "Latency degradation appears without database saturation or retry amplification."
+		}
 	}
 	return c
 }
 
-// ResourceExhaustion scores memory, CPU, and restart signatures.
-type ResourceExhaustion struct{}
+func (PerformanceRegression) SeedQuestions() []archetype.QuestionSeed {
+	return []archetype.QuestionSeed{
+		{
+			ID: "latency-regression", Priority: 68,
+			Title:       "Did latency regress without saturation or retries?",
+			Description: "Isolated latency spikes can indicate a code or query regression.",
+			Requires:      []model.Category{model.CategoryMetrics, model.CategoryTraceEvents},
+			TriggerSignal: "performance",
+			Effects: []archetype.QuestionEffect{
+				effect(true, archetype.EffectIncrease, "hypothesis-performance-regression", 28),
+				effect(false, archetype.EffectDecrease, "hypothesis-performance-regression", 18),
+			},
+		},
+	}
+}
 
-func (ResourceExhaustion) ID() string           { return "resource-exhaustion" }
-func (ResourceExhaustion) Name() string         { return "Resource Exhaustion" }
-func (ResourceExhaustion) Domain() archetype.Domain { return archetype.DomainInfrastructure }
-func (ResourceExhaustion) Priority() int        { return 5 }
-func (ResourceExhaustion) HypothesisID() string { return "hypothesis-resource-exhaustion" }
-func (ResourceExhaustion) Applicable(ctx archetype.ScoreContext) bool {
+// HumanError scores manual or operational mistakes.
+type HumanError struct{}
+
+func (HumanError) ID() string               { return "human-error" }
+func (HumanError) Name() string             { return "Human / Operational Error" }
+func (HumanError) Domain() archetype.Domain { return archetype.DomainApplication }
+func (HumanError) Priority() int            { return 5 }
+func (HumanError) HypothesisID() string     { return "hypothesis-human-error" }
+func (HumanError) Applicable(ctx archetype.ScoreContext) bool {
 	return alwaysApplicable(ctx)
 }
-func (ResourceExhaustion) ExpectedEvidence() []model.Category {
-	return []model.Category{model.CategoryMetrics, model.CategoryInfrastructureEvents, model.CategoryApplicationLogs}
+func (HumanError) ExpectedEvidence() []model.Category {
+	return []model.Category{model.CategoryHumanContext, model.CategoryConfigurationChanges, model.CategoryApplicationLogs}
 }
-func (ResourceExhaustion) TypicalSubcauses() []string {
-	return []string{"memory leak", "oom", "cpu saturation", "disk full", "file descriptors"}
+func (HumanError) TypicalSubcauses() []string {
+	return []string{"manual change", "wrong procedure", "runbook skipped", "fat finger"}
 }
-func (a ResourceExhaustion) Score(ctx archetype.ScoreContext) archetype.Candidate {
+func (a HumanError) Score(ctx archetype.ScoreContext) archetype.Candidate {
 	sig := ctx.Signals
 	s := ctx.Session
 	c := archetype.Candidate{
 		HypothesisID: a.HypothesisID(),
-		Statement:    "Resource exhaustion (memory/CPU) caused crashes or throttling.",
+		Statement:    "A human or operational error triggered the incident.",
 	}
-	if sig.Keywords["memory"] {
-		c.Score += 35
-		c.Rationale = "Memory pressure symptoms appear in the evidence."
+	if s.HasCategory(model.CategoryHumanContext) {
+		c.Score += 40
+		c.Rationale = "Human context evidence describes an operational mistake."
 		c.Support = append(c.Support, sigpkg.EvidenceMatching(s, func(e *model.Evidence) bool {
-			return sigpkg.MatchesAny(sigpkg.Haystack(e), sigpkg.Keywords["memory"])
+			return e.Category == model.CategoryHumanContext
 		})...)
 	}
-	if sig.Keywords["restart"] {
-		c.Score += 12
+	if sig.Keywords["human"] {
+		c.Score += 28
+		if c.Rationale == "" {
+			c.Rationale = "Evidence suggests a manual or operational error."
+		}
 	}
 	return c
 }
 
-// RetryStorm scores retry amplification and cascading failures.
-type RetryStorm struct{}
+func (HumanError) SeedQuestions() []archetype.QuestionSeed {
+	return []archetype.QuestionSeed{
+		{
+			ID: "manual-change", Priority: 70,
+			Title:       "Was a manual or operational change involved?",
+			Description: "Operator actions and runbook deviations are common root causes.",
+			Requires:      []model.Category{model.CategoryHumanContext, model.CategoryApplicationLogs},
+			TriggerSignal: "human",
+			Effects: []archetype.QuestionEffect{
+				effect(true, archetype.EffectIncrease, "hypothesis-human-error", 32),
+				effect(false, archetype.EffectDecrease, "hypothesis-human-error", 18),
+			},
+		},
+	}
+}
 
-func (RetryStorm) ID() string           { return "retry-storm" }
-func (RetryStorm) Name() string         { return "Retry Storm / Cascading Failure" }
-func (RetryStorm) Domain() archetype.Domain { return archetype.DomainOperations }
-func (RetryStorm) Priority() int        { return 5 }
-func (RetryStorm) HypothesisID() string { return "hypothesis-retry-storm" }
-func (RetryStorm) Applicable(ctx archetype.ScoreContext) bool {
+// APIContractFailure scores schema and version mismatches.
+type APIContractFailure struct{}
+
+func (APIContractFailure) ID() string               { return "api-contract-failure" }
+func (APIContractFailure) Name() string             { return "API Contract Failure" }
+func (APIContractFailure) Domain() archetype.Domain { return archetype.DomainApplication }
+func (APIContractFailure) Priority() int            { return 4 }
+func (APIContractFailure) HypothesisID() string     { return "hypothesis-api-contract-failure" }
+func (APIContractFailure) Applicable(ctx archetype.ScoreContext) bool {
 	return alwaysApplicable(ctx)
 }
-func (RetryStorm) ExpectedEvidence() []model.Category {
-	return []model.Category{model.CategoryApplicationLogs, model.CategoryMetrics, model.CategoryTraceEvents}
+func (APIContractFailure) ExpectedEvidence() []model.Category {
+	return []model.Category{model.CategoryApplicationLogs, model.CategoryTraceEvents, model.CategoryDeploymentEvents}
 }
-func (RetryStorm) TypicalSubcauses() []string {
-	return []string{"aggressive retries", "missing circuit breaker", "cascading timeout", "thundering herd"}
+func (APIContractFailure) TypicalSubcauses() []string {
+	return []string{"breaking change", "version mismatch", "serialization error", "schema drift"}
 }
-func (a RetryStorm) Score(ctx archetype.ScoreContext) archetype.Candidate {
-	sig := ctx.Signals
-	s := ctx.Session
-	c := archetype.Candidate{
-		HypothesisID: a.HypothesisID(),
-		Statement:    "A retry storm / cascading failure amplified a smaller fault.",
-	}
-	if sig.Keywords["retry"] {
-		c.Score += 32
-		c.Rationale = "Retry-amplification symptoms appear in the evidence."
-		c.Support = append(c.Support, sigpkg.EvidenceMatching(s, func(e *model.Evidence) bool {
-			return sigpkg.MatchesAny(sigpkg.Haystack(e), sigpkg.Keywords["retry"])
-		})...)
-	}
-	if sig.Keywords["latency"] {
-		c.Score += 8
-	}
-	return c
+func (a APIContractFailure) Score(ctx archetype.ScoreContext) archetype.Candidate {
+	return scoreKeyword(ctx, a.HypothesisID(),
+		"An API contract or schema mismatch broke client-server compatibility.",
+		"apicontract", 42)
 }
 
-// Unknown is the catch-all that fades as evidence coverage grows.
-type Unknown struct{}
+func (APIContractFailure) SeedQuestions() []archetype.QuestionSeed {
+	return []archetype.QuestionSeed{{
+		ID: "api-breaking-change", Priority: 72,
+		Title:       "Was there a breaking API or schema change?",
+		Description: "Version mismatches and serialization errors surface as 4xx/5xx at boundaries.",
+		Requires:      []model.Category{model.CategoryApplicationLogs, model.CategoryDeploymentEvents},
+		TriggerSignal: "apicontract",
+		Effects: []archetype.QuestionEffect{
+			effect(true, archetype.EffectIncrease, "hypothesis-api-contract-failure", 30),
+			effect(false, archetype.EffectDecrease, "hypothesis-api-contract-failure", 20),
+		},
+	}}
+}
 
-func (Unknown) ID() string           { return "unknown-novel" }
-func (Unknown) Name() string         { return "Unknown / Novel Failure" }
-func (Unknown) Domain() archetype.Domain { return archetype.DomainGeneric }
-func (Unknown) Priority() int        { return 5 }
-func (Unknown) HypothesisID() string { return "hypothesis-unknown" }
-func (Unknown) Applicable(ctx archetype.ScoreContext) bool {
+// FeatureFlagFailure scores feature-flag rollout mistakes.
+type FeatureFlagFailure struct{}
+
+func (FeatureFlagFailure) ID() string               { return "feature-flag-failure" }
+func (FeatureFlagFailure) Name() string             { return "Feature Flag Failure" }
+func (FeatureFlagFailure) Domain() archetype.Domain { return archetype.DomainApplication }
+func (FeatureFlagFailure) Priority() int            { return 4 }
+func (FeatureFlagFailure) HypothesisID() string     { return "hypothesis-feature-flag-failure" }
+func (FeatureFlagFailure) Applicable(ctx archetype.ScoreContext) bool {
 	return alwaysApplicable(ctx)
 }
-func (Unknown) ExpectedEvidence() []model.Category { return nil }
-func (Unknown) TypicalSubcauses() []string           { return nil }
-func (a Unknown) Score(ctx archetype.ScoreContext) archetype.Candidate {
-	score := 40.0 - 5*float64(len(ctx.Signals.Categories))
-	if score < 4 {
-		score = 4
-	}
-	return archetype.Candidate{
+func (FeatureFlagFailure) ExpectedEvidence() []model.Category {
+	return []model.Category{model.CategoryConfigurationChanges, model.CategoryDeploymentEvents, model.CategoryApplicationLogs}
+}
+func (FeatureFlagFailure) TypicalSubcauses() []string {
+	return []string{"flag enabled for wrong audience", "gradual rollout bug", "stale flag state"}
+}
+func (a FeatureFlagFailure) Score(ctx archetype.ScoreContext) archetype.Candidate {
+	return scoreWith(ctx, scoreOpts{
 		HypothesisID: a.HypothesisID(),
-		Statement:    "Root cause is not yet determined; more evidence is required.",
-		Score:        score,
-		Rationale:    "Reflects residual uncertainty given current evidence coverage.",
-		AlwaysKeep:   true,
-	}
+		Statement:    "A feature-flag change or rollout mistake introduced the regression.",
+		Keyword:      "featureflag",
+		Base:         44,
+		Penalties: []scorePenalty{
+			{When: "config", Unless: "featureflag", Amount: 15},
+		},
+	})
+}
+
+func (FeatureFlagFailure) SeedQuestions() []archetype.QuestionSeed {
+	return []archetype.QuestionSeed{{
+		ID: "feature-flag-changed", Priority: 71,
+		Title:       "Was a feature flag enabled, disabled, or rolled out?",
+		Description: "Flag changes can affect subsets of traffic without a full deployment.",
+		Requires:      []model.Category{model.CategoryConfigurationChanges, model.CategoryDeploymentEvents},
+		TriggerSignal: "featureflag",
+		Effects: []archetype.QuestionEffect{
+			effect(true, archetype.EffectIncrease, "hypothesis-feature-flag-failure", 30),
+			effect(false, archetype.EffectDecrease, "hypothesis-feature-flag-failure", 18),
+			effect(true, archetype.EffectDecrease, "hypothesis-configuration-change", 15),
+		},
+	}}
 }

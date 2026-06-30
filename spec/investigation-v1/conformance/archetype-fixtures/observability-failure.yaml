@@ -1,0 +1,41 @@
+archetype_id: observability-failure
+scenario_id: SC-ARCH-029
+tier: core
+description: Telemetry blind spot.
+start:
+    question: Why can't we see what happened?
+    service: api
+    goal: root_cause
+    time_window:
+        start: "2026-06-27T09:00:00Z"
+        end: "2026-06-27T09:30:00Z"
+expect_after_start:
+    required_evidence_min: 1
+    plan_questions_min: 1
+evidence_batches:
+    - - id: log-1
+        timestamp: "2026-06-27T09:01:00Z"
+        category: application_logs
+        entity: api
+        summary: missing metrics and missing logs for incident window; observability gap
+    - - id: log-2
+        timestamp: "2026-06-27T09:02:00Z"
+        category: application_logs
+        entity: api
+        summary: telemetry agent down; sampling dropped all traces; observability blind spot
+expect_after_all_evidence:
+    leading_hypothesis_id: hypothesis-observability-failure
+    min_confidence: 10
+    min_lead_margin: 1
+    must_not_lead:
+        - hypothesis-human-error
+        - hypothesis-unknown
+    min_hypotheses: 1
+    graph_nodes_min: 1
+expect_after_finish:
+    state: completed
+    report_required_fields:
+        - executive_summary
+        - hypotheses
+        - confidence
+        - postmortem
