@@ -89,15 +89,23 @@ func Analyze(s *model.Session) Signals {
 			sig.Entities[e.Entity]++
 		}
 		text := Haystack(e)
+		rulesOutDeploy := EvidenceRulesOutDeploy(e)
+		rulesOutConfig := EvidenceRulesOutConfig(e)
 		for name, words := range Keywords {
+			if name == "deployment" && rulesOutDeploy {
+				continue
+			}
+			if name == "config" && rulesOutConfig {
+				continue
+			}
 			if MatchesAny(text, words) {
 				sig.Keywords[name] = true
 			}
 		}
 
 		isRecovery := MatchesAny(text, Keywords["rollback"]) || MatchesAny(text, Keywords["recovery"])
-		isDeploy := !isRecovery && e.Category == model.CategoryDeploymentEvents
-		if !isDeploy && e.Category != model.CategoryConfigurationChanges {
+		isDeploy := !isRecovery && !rulesOutDeploy && e.Category == model.CategoryDeploymentEvents
+		if !isDeploy && e.Category != model.CategoryConfigurationChanges && !rulesOutDeploy {
 			isDeploy = MatchesAny(text, Keywords["deployment"])
 		}
 

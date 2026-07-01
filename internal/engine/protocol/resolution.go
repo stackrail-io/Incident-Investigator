@@ -6,6 +6,7 @@ import (
 
 	"github.com/stackrail/incident-investigator/internal/engine"
 	"github.com/stackrail/incident-investigator/internal/model"
+	sigpkg "github.com/stackrail/incident-investigator/internal/signals"
 )
 
 // ResolutionEngine resolves protocol questions from evidence and signals.
@@ -33,7 +34,11 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 
 	switch q.ID {
 	case "deploy-before-errors":
-		if sig.DeployBeforeIncident {
+		if sigpkg.AllDeploymentEvidenceRuledOut(s) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 88
+			res.Reason = "Deployment was investigated and explicitly ruled out before symptom onset."
+		} else if sig.DeployBeforeIncident {
 			res.Status = model.ResolutionConfirmed
 			res.Confidence = 88
 			res.Reason = "Deployment preceded the first symptom."
@@ -151,10 +156,18 @@ func (r *ResolutionEngine) Resolve(q *model.Question, s *model.Session, sig engi
 			res.Reason = "Need corroborating latency and retry evidence."
 		}
 	case "config-changed":
-		if s.HasCategory(model.CategoryConfigurationChanges) || sig.Keywords["config"] {
+		if sigpkg.AllConfigurationEvidenceRuledOut(s) {
+			res.Status = model.ResolutionRejected
+			res.Confidence = 88
+			res.Reason = "Configuration change was investigated and explicitly ruled out."
+		} else if sigpkg.HasAffirmativeConfigurationEvidence(s) {
 			res.Status = model.ResolutionConfirmed
 			res.Confidence = 82
-			res.Reason = "Configuration change evidence present."
+			res.Reason = "Affirmative configuration change evidence present."
+		} else if s.HasCategory(model.CategoryConfigurationChanges) {
+			res.Status = model.ResolutionInsufficientEvidence
+			res.Confidence = 45
+			res.Reason = "Configuration category present but no affirmative change described."
 		} else {
 			res.Status = model.ResolutionRejected
 			res.Confidence = 70

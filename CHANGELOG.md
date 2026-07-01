@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Negation-aware evidence signals** — ruled-out deployment and configuration findings (`new_deploy: false`, "no deployment", etc.) no longer boost deploy-caused or config-change hypotheses; `deployment-unrelated` scores higher when deploy is explicitly ruled out.
+- **Semantic prompt payloads** — LLM semantic reasoner now receives evidence `payload` fields, not only summaries.
+
+### Fixed
+
+- **Category-vs-content paradox** — submitting negative findings in `deployment_events` or `configuration_changes` no longer confirms `deploy-before-errors` or `config-changed` questions.
 - **v1.1 architecture documentation** — `docs/architecture.md`, `docs/design-principles.md`, `docs/development.md`, `docs/extension-apis.md`, and eight ADRs under `docs/adr/`.
 - **Investigation Specification overview** — `spec/investigation-v1/SPECIFICATION.md` (implementation-independent entity and protocol reference).
 - **Public extension package** — `pkg/extension` provider registries and documented extension contracts.

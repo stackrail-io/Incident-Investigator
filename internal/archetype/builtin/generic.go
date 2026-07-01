@@ -3,6 +3,7 @@ package builtin
 import (
 	"github.com/stackrail/incident-investigator/internal/archetype"
 	"github.com/stackrail/incident-investigator/internal/model"
+	sigpkg "github.com/stackrail/incident-investigator/internal/signals"
 )
 
 // DeploymentUnrelated competes against deployment-blame bias.
@@ -24,6 +25,7 @@ func (DeploymentUnrelated) SeedQuestions() []archetype.QuestionSeed { return nil
 
 func (a DeploymentUnrelated) Score(ctx archetype.ScoreContext) archetype.Candidate {
 	sig := ctx.Signals
+	s := ctx.Session
 	c := archetype.Candidate{
 		HypothesisID: a.HypothesisID(),
 		Statement:    "The deployment was unrelated; the incident has another root cause.",
@@ -34,7 +36,13 @@ func (a DeploymentUnrelated) Score(ctx archetype.ScoreContext) archetype.Candida
 		c.Score += 40
 		c.Rationale = "The deployment timestamp falls after the incident began."
 	}
-	if sig.FirstDeployment == nil {
+	if sigpkg.AllDeploymentEvidenceRuledOut(s) {
+		c.Score += 45
+		c.Rationale = "Deployment was investigated and explicitly ruled out."
+		c.Support = append(c.Support, sigpkg.EvidenceMatching(s, func(e *model.Evidence) bool {
+			return e != nil && e.Category == model.CategoryDeploymentEvents
+		})...)
+	} else if sig.FirstDeployment == nil && !sigpkg.HasAffirmativeDeploymentEvidence(s) {
 		c.Score = 0
 	}
 	return c
