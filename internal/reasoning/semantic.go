@@ -44,10 +44,11 @@ func (m *MockLLM) Analyze(_ context.Context, prompt string) (*LLMResponse, error
 // BuildSemanticPrompt serializes investigation context for an LLM backend.
 func BuildSemanticPrompt(inv *Investigation) string {
 	type evidenceItem struct {
-		ID       string `json:"id"`
-		Category string `json:"category"`
-		Entity   string `json:"entity,omitempty"`
-		Summary  string `json:"summary"`
+		ID       string         `json:"id"`
+		Category string         `json:"category"`
+		Entity   string         `json:"entity,omitempty"`
+		Summary  string         `json:"summary"`
+		Payload  map[string]any `json:"payload,omitempty"`
 	}
 	type summary struct {
 		Question          string              `json:"question"`
@@ -83,6 +84,7 @@ func BuildSemanticPrompt(inv *Investigation) string {
 		}
 		evItems = append(evItems, evidenceItem{
 			ID: e.ID, Category: string(e.Category), Entity: e.Entity, Summary: e.Summary,
+			Payload: e.Payload,
 		})
 	}
 	s.EvidenceSummaries = evItems

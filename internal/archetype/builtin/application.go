@@ -131,15 +131,18 @@ func (a ConfigurationChange) Score(ctx archetype.ScoreContext) archetype.Candida
 		HypothesisID: a.HypothesisID(),
 		Statement:    "A configuration or feature-flag change triggered the incident.",
 	}
-	if sig.Keywords["config"] && !sig.Keywords["featureflag"] {
+	if sig.Keywords["config"] && !sig.Keywords["featureflag"] && sigpkg.HasAffirmativeConfigurationEvidence(s) {
 		c.Score += 30
 		c.Rationale = "Configuration-change symptoms appear in the evidence."
 		c.Support = append(c.Support, sigpkg.EvidenceMatching(s, func(e *model.Evidence) bool {
+			if sigpkg.EvidenceRulesOutConfig(e) {
+				return false
+			}
 			return e.Category == model.CategoryConfigurationChanges ||
 				sigpkg.MatchesAny(sigpkg.Haystack(e), sigpkg.Keywords["config"])
 		})...)
 	}
-	if s.HasCategory(model.CategoryConfigurationChanges) && !sig.Keywords["kubernetes"] {
+	if sigpkg.HasAffirmativeConfigurationEvidence(s) && !sig.Keywords["kubernetes"] {
 		c.Score += 12
 		if c.Rationale == "" {
 			c.Rationale = "A configuration change was recorded before symptoms appeared."

@@ -14,6 +14,32 @@ go test ./...
 go build -o bin/incident-investigator ./cmd/incident-investigator
 ```
 
+## Submit evidence
+
+`runtime.Submit` appends vendor-neutral `Evidence`, deduplicates by id, and recomputes.
+
+### Ruled-out findings (negative evidence)
+
+Use `deployment_events` or `configuration_changes` when you **investigated** that dimension—not only when it happened. The runtime distinguishes **affirmative** vs **ruled-out** findings:
+
+- Summary phrases: `"No deployment in window"`, `"No config change"`
+- Payload flags: `new_deploy: false`, `config_changed: false`
+
+Ruled-out items do **not** boost deploy-caused or configuration-change hypotheses. Prefer `human_context` for free-form narrative that does not fit a category.
+
+### Semantic (LLM) reasoner
+
+A **semantic reasoner** is registered by default but only runs when:
+
+1. The MCP client advertises the **`sampling`** capability, and
+2. The host LLM backend is attached during the tool call.
+
+Without sampling, investigation uses **heuristic reasoners only** (temporal, hypothesis, consistency, causal). That is intentional: conclusions must remain explainable and replayable without an LLM.
+
+When sampling is available, the semantic reasoner receives evidence summaries **and payloads** and may propose declarative actions. The **hypothesis reasoner** still owns normalized scoring; LLM output is merged via the action validator, not a black-box override.
+
+See [philosophy](philosophy.md) — deterministic reasoning and LLM reasoning are complements, not substitutes.
+
 ## How investigations flow
 
 ### 1. Start
