@@ -1,0 +1,36 @@
+{
+  "batch": "02-symptom-spike",
+  "description": "5xx errors and paging alerts immediately after deploy.",
+  "evidence": [
+    {
+      "category": "application_logs",
+      "entity": "checkout-api",
+      "id": "log-1",
+      "payload": {
+        "endpoint": "/checkout",
+        "error_count_5m": 1240,
+        "http_status": 500,
+        "level": "error",
+        "service": ""
+      },
+      "source": "datadog",
+      "summary": "HTTP 500 errors spiking on /checkout endpoint",
+      "timestamp": "2026-06-27T09:05:00Z"
+    },
+    {
+      "category": "alert_events",
+      "entity": "checkout-api",
+      "id": "alert-1",
+      "payload": {
+        "current_value": "12%",
+        "monitor": "alert-1",
+        "severity": "critical",
+        "status": "firing",
+        "threshold": "5%"
+      },
+      "source": "datadog",
+      "summary": "Alert: checkout-api 5xx error rate exceeded 5%",
+      "timestamp": "2026-06-27T09:06:00Z"
+    }
+  ]
+}

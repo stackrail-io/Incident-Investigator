@@ -1,3 +1,8 @@
-# retry-storm
+# Retry storm
 
-Example investigation replayed from the archetype conformance fixture. See `go test ./examples/ -run retry-storm`.
+**Service:** `gateway`  
+**Question:** Why did gateway latency explode?
+
+Upstream timeouts trigger aggressive retries; request rate amplifies ~10× baseline — classic retry storm pattern.
+
+Leading hypothesis: **`hypothesis-retry-storm`**.

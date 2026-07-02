@@ -1,0 +1,21 @@
+{
+  "batch": "02-latency-alert",
+  "description": "p95 write latency breaches SLO; DB metrics still healthy.",
+  "evidence": [
+    {
+      "category": "alert_events",
+      "entity": "auth-api",
+      "id": "alert-1",
+      "payload": {
+        "current_value": "12%",
+        "monitor": "alert-1",
+        "severity": "critical",
+        "status": "firing",
+        "threshold": "5%"
+      },
+      "source": "datadog",
+      "summary": "p95 latency 65.8s vs 30s threshold",
+      "timestamp": "2026-06-27T09:05:00Z"
+    }
+  ]
+}

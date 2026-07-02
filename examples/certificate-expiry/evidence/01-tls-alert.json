@@ -1,0 +1,20 @@
+{
+  "batch": "01-tls-alert",
+  "description": "Certificate monitor fires on api.example.com expiry.",
+  "evidence": [
+    {
+      "category": "security_events",
+      "entity": "api-gateway",
+      "id": "sec-1",
+      "payload": {
+        "cert_cn": "api.example.com",
+        "days_expired": 3,
+        "issuer": "Let's Encrypt",
+        "not_after": "2026-06-24T00:00:00Z"
+      },
+      "source": "datadog",
+      "summary": "TLS certificate for api.example.com expired (x509)",
+      "timestamp": "2026-06-27T09:00:00Z"
+    }
+  ]
+}

@@ -1,1 +1,6 @@
-{"leading_hypothesis_id": "hypothesis-regional-failure"}
+{
+  "competing_hypotheses_min": 1,
+  "leading_hypothesis_id": "hypothesis-regional-failure",
+  "min_confidence": 10,
+  "summary": "After all evidence, hypothesis-regional-failure should lead with confidence \u003e= 10."
+}

@@ -1,1 +1,6 @@
-{"leading_hypothesis_id": "hypothesis-deployment-caused"}
+{
+  "competing_hypotheses_min": 1,
+  "leading_hypothesis_id": "hypothesis-deployment-caused",
+  "min_confidence": 20,
+  "summary": "After all evidence, hypothesis-deployment-caused should lead with confidence \u003e= 20."
+}

@@ -1,0 +1,20 @@
+{
+  "batch": "02-app-errors",
+  "description": "payments-api connection pool errors referencing DNS.",
+  "evidence": [
+    {
+      "category": "application_logs",
+      "entity": "payments-api",
+      "id": "log-1",
+      "payload": {
+        "host": "db.internal",
+        "level": "error",
+        "resolver_error": "NXDOMAIN",
+        "service": ""
+      },
+      "source": "datadog",
+      "summary": "could not resolve host db.internal; name resolution error",
+      "timestamp": "2026-06-27T09:01:00Z"
+    }
+  ]
+}

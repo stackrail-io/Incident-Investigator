@@ -1,0 +1,19 @@
+{
+  "batch": "01-az-failure",
+  "description": "us-east-1 AZ impairment reported by cloud provider.",
+  "evidence": [
+    {
+      "category": "infrastructure_events",
+      "entity": "api",
+      "id": "infra-1",
+      "payload": {
+        "event_type": "AZImpaired",
+        "provider_status": "major",
+        "region": "us-east-1"
+      },
+      "source": "datadog",
+      "summary": "availability zone failure in us-east-1; regional outage",
+      "timestamp": "2026-06-27T09:01:00Z"
+    }
+  ]
+}

@@ -1,1 +1,6 @@
-{"leading_hypothesis_id": "hypothesis-dns-failure"}
+{
+  "competing_hypotheses_min": 1,
+  "leading_hypothesis_id": "hypothesis-dns-failure",
+  "min_confidence": 18,
+  "summary": "After all evidence, hypothesis-dns-failure should lead with confidence \u003e= 18."
+}

@@ -1,0 +1,21 @@
+{
+  "batch": "01-config-gap",
+  "description": "Pool config missing lock_timeout / statement_timeout.",
+  "evidence": [
+    {
+      "category": "configuration_changes",
+      "entity": "auth-api",
+      "id": "cfg-1",
+      "payload": {
+        "changed_by": "helm-upgrade",
+        "component": "connection_pool",
+        "config_changed": true,
+        "lock_timeout_ms": null,
+        "statement_timeout_ms": null
+      },
+      "source": "datadog",
+      "summary": "connection pool has no statement_timeout or lock_timeout configured",
+      "timestamp": "2026-06-27T09:00:00Z"
+    }
+  ]
+}

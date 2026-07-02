@@ -1,0 +1,20 @@
+{
+  "batch": "03-db-metrics",
+  "description": "Postgres CPU and connection headroom remain healthy.",
+  "evidence": [
+    {
+      "category": "metrics",
+      "entity": "postgres-primary",
+      "id": "metric-1",
+      "payload": {
+        "connections_active": 12,
+        "connections_max": 100,
+        "cpu_pct": 15,
+        "source": "datadog"
+      },
+      "source": "datadog",
+      "summary": "db connections 12/100, cpu 15%, reads fast",
+      "timestamp": "2026-06-27T09:05:30Z"
+    }
+  ]
+}

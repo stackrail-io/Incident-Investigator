@@ -1,0 +1,19 @@
+{
+  "batch": "02-regional-impact",
+  "description": "Single-region capacity loss; cross-AZ traffic shift incomplete.",
+  "evidence": [
+    {
+      "category": "network_events",
+      "entity": "api",
+      "id": "net-1",
+      "payload": {
+        "failed_az": "us-east-1a",
+        "region": "us-east-1",
+        "source": "vpc-flow"
+      },
+      "source": "datadog",
+      "summary": "single region dependency; zone failure isolated capacity",
+      "timestamp": "2026-06-27T09:02:00Z"
+    }
+  ]
+}

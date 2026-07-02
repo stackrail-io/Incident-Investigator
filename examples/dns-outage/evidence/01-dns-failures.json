@@ -1,0 +1,19 @@
+{
+  "batch": "01-dns-failures",
+  "description": "CoreDNS / resolver NXDOMAIN for db.internal.",
+  "evidence": [
+    {
+      "category": "network_events",
+      "entity": "payments-api",
+      "id": "net-1",
+      "payload": {
+        "query": "db.internal",
+        "rcode": "NXDOMAIN",
+        "source": "vpc-flow"
+      },
+      "source": "datadog",
+      "summary": "DNS resolution failures for db.internal (NXDOMAIN)",
+      "timestamp": "2026-06-27T09:00:00Z"
+    }
+  ]
+}

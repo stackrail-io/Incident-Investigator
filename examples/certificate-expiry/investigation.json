@@ -1,0 +1,10 @@
+{
+  "description": "Expired TLS certificate.",
+  "goal": "root_cause",
+  "question": "Why is the API gateway rejecting requests?",
+  "service": "api-gateway",
+  "time_window": {
+    "start": "2026-06-27T09:00:00Z",
+    "end": "2026-06-27T09:30:00Z"
+  }
+}

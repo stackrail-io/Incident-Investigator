@@ -1,0 +1,33 @@
+{
+  "batch": "02-oom-restart",
+  "description": "Pod OOMKilled; JVM heap space error in logs.",
+  "evidence": [
+    {
+      "category": "infrastructure_events",
+      "entity": "image-service",
+      "id": "infra-1",
+      "payload": {
+        "exit_code": 137,
+        "reason": "OOMKilled",
+        "restart_count": 4
+      },
+      "source": "datadog",
+      "summary": "Pod OOMKilled and restarted",
+      "timestamp": "2026-06-27T09:30:00Z"
+    },
+    {
+      "category": "application_logs",
+      "entity": "image-service",
+      "id": "log-1",
+      "payload": {
+        "exception": "java.lang.OutOfMemoryError",
+        "heap_used_mb": 4096,
+        "level": "error",
+        "service": ""
+      },
+      "source": "datadog",
+      "summary": "java.lang.OutOfMemoryError: Java heap space",
+      "timestamp": "2026-06-27T09:31:00Z"
+    }
+  ]
+}

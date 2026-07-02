@@ -1,1 +1,6 @@
-{"leading_hypothesis_id": "hypothesis-retry-storm"}
+{
+  "competing_hypotheses_min": 1,
+  "leading_hypothesis_id": "hypothesis-retry-storm",
+  "min_confidence": 10,
+  "summary": "After all evidence, hypothesis-retry-storm should lead with confidence \u003e= 10."
+}

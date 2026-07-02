@@ -1,0 +1,35 @@
+{
+  "batch": "03-rollback-recovery",
+  "description": "Rollback to v2.3.9; error rate returns to baseline.",
+  "evidence": [
+    {
+      "category": "metrics",
+      "entity": "checkout-api",
+      "id": "metric-1",
+      "payload": {
+        "error_rate_pct": 12,
+        "p99_latency_ms": 4000,
+        "source": "datadog"
+      },
+      "source": "datadog",
+      "summary": "error_rate 12%, p99 latency 4s",
+      "timestamp": "2026-06-27T09:07:00Z"
+    },
+    {
+      "category": "deployment_events",
+      "entity": "checkout-api",
+      "id": "dep-2",
+      "payload": {
+        "commit": "a1b2c3d",
+        "deploy_id": "dep-checkout-8842",
+        "environment": "production",
+        "new_deploy": true,
+        "pipeline": "github-actions",
+        "version": "v2.4.0"
+      },
+      "source": "datadog",
+      "summary": "Rolled back checkout-api to v2.3.9; service recovered",
+      "timestamp": "2026-06-27T09:18:00Z"
+    }
+  ]
+}

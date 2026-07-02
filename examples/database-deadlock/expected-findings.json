@@ -1,1 +1,6 @@
-{"leading_hypothesis_id": "hypothesis-lock-contention"}
+{
+  "competing_hypotheses_min": 1,
+  "leading_hypothesis_id": "hypothesis-lock-contention",
+  "min_confidence": 18,
+  "summary": "After all evidence, hypothesis-lock-contention should lead with confidence \u003e= 18."
+}

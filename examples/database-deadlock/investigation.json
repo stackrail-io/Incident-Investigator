@@ -1,0 +1,10 @@
+{
+  "description": "Row lock queue with healthy database metrics.",
+  "goal": "root_cause",
+  "question": "Why did renameIdentityProvider writes spike to 66s p95?",
+  "service": "auth-api",
+  "time_window": {
+    "start": "2026-06-27T09:00:00Z",
+    "end": "2026-06-27T09:30:00Z"
+  }
+}

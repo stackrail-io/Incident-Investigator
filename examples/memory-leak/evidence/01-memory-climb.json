@@ -1,0 +1,19 @@
+{
+  "batch": "01-memory-climb",
+  "description": "Heap growth over two hours preceding incident.",
+  "evidence": [
+    {
+      "category": "metrics",
+      "entity": "image-service",
+      "id": "metric-1",
+      "payload": {
+        "heap_growth_mb_per_hour": 180,
+        "memory_pct": 95,
+        "source": "datadog"
+      },
+      "source": "datadog",
+      "summary": "memory usage climbing 60% -\u003e 95%, heap growth over 2h",
+      "timestamp": "2026-06-27T09:00:00Z"
+    }
+  ]
+}

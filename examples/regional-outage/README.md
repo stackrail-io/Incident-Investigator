@@ -1,3 +1,8 @@
-# regional-outage
+# Regional / AZ failure
 
-Example investigation replayed from the archetype conformance fixture. See `go test ./examples/ -run regional-outage`.
+**Service:** `api`  
+**Question:** Why did us-east-1 fail?
+
+Cloud provider reports **availability zone impairment** in `us-east-1`; single-region capacity loss.
+
+Leading hypothesis: **`hypothesis-regional-failure`**.

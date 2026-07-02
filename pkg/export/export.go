@@ -26,16 +26,26 @@ const (
 
 // Snapshot is a portable investigation view for exporters.
 type Snapshot struct {
-	InvestigationID string       `json:"investigation_id"`
-	Question        string       `json:"question"`
-	Service         string       `json:"service,omitempty"`
-	State           string       `json:"state"`
-	Confidence      float64      `json:"confidence"`
-	Evidence        []Evidence   `json:"evidence"`
-	Hypotheses      []Hypothesis `json:"hypotheses"`
-	Graph           GraphView    `json:"graph"`
-	Report          *Report      `json:"report,omitempty"`
-	ExportedAt      time.Time    `json:"exported_at"`
+	InvestigationID string            `json:"investigation_id"`
+	Question        string            `json:"question"`
+	Service         string            `json:"service,omitempty"`
+	State           string            `json:"state"`
+	Confidence      float64           `json:"confidence"`
+	Evidence        []Evidence        `json:"evidence"`
+	Timeline        []TimelineEntry   `json:"timeline,omitempty"`
+	Hypotheses      []Hypothesis      `json:"hypotheses"`
+	Graph           GraphView         `json:"graph"`
+	Report          *Report           `json:"report,omitempty"`
+	ExportedAt      time.Time         `json:"exported_at"`
+}
+
+// TimelineEntry is one chronological moment in the incident.
+type TimelineEntry struct {
+	Timestamp    time.Time `json:"timestamp"`
+	Description  string    `json:"description"`
+	Category     string    `json:"category"`
+	Entity       string    `json:"entity,omitempty"`
+	EvidenceRefs []string  `json:"evidence_refs,omitempty"`
 }
 
 // Evidence is a vendor-neutral observation.
@@ -137,6 +147,13 @@ func (MarkdownExporter) Format() Format { return FormatMarkdown }
 
 func (MarkdownExporter) Export(snap *Snapshot) ([]byte, error) {
 	var b strings.Builder
+	if snap.Report != nil && snap.Report.Postmortem != "" {
+		b.WriteString(snap.Report.Postmortem)
+		if !strings.HasSuffix(snap.Report.Postmortem, "\n") {
+			b.WriteString("\n")
+		}
+		return []byte(b.String()), nil
+	}
 	fmt.Fprintf(&b, "# Investigation %s\n\n", snap.InvestigationID)
 	fmt.Fprintf(&b, "**Question:** %s\n\n", snap.Question)
 	fmt.Fprintf(&b, "**State:** %s | **Confidence:** %.1f%%\n\n", snap.State, snap.Confidence)
@@ -149,6 +166,26 @@ func (MarkdownExporter) Export(snap *Snapshot) ([]byte, error) {
 			}
 			b.WriteString("\n")
 		}
+	}
+	if len(snap.Timeline) > 0 {
+		b.WriteString("## Chronological Timeline\n\n")
+		b.WriteString("| Time (UTC) | Evidence | Category | Entity | Event |\n")
+		b.WriteString("| --- | --- | --- | --- | --- |\n")
+		for _, e := range snap.Timeline {
+			evID := strings.Join(e.EvidenceRefs, ", ")
+			if evID != "" {
+				evID = "`" + evID + "`"
+			} else {
+				evID = "—"
+			}
+			entity := e.Entity
+			if entity == "" {
+				entity = "—"
+			}
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n",
+				e.Timestamp.UTC().Format(time.RFC3339), evID, e.Category, entity, e.Description)
+		}
+		b.WriteString("\n")
 	}
 	if len(snap.Hypotheses) > 0 {
 		b.WriteString("## Hypotheses\n\n")

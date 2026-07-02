@@ -1,0 +1,20 @@
+{
+  "batch": "02-handshake-errors",
+  "description": "Application logs show TLS handshake failures.",
+  "evidence": [
+    {
+      "category": "application_logs",
+      "entity": "api-gateway",
+      "id": "log-1",
+      "payload": {
+        "level": "error",
+        "service": "",
+        "sni": "api.example.com",
+        "tls_error": "certificate has expired"
+      },
+      "source": "datadog",
+      "summary": "x509: certificate has expired; TLS handshake failure",
+      "timestamp": "2026-06-27T09:01:00Z"
+    }
+  ]
+}

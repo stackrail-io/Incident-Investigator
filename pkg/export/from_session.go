@@ -34,6 +34,12 @@ func FromSession(s *model.Session, report *model.Report) *Snapshot {
 			Status: string(h.Status), Rationale: h.Rationale,
 		})
 	}
+	for _, e := range s.Timeline {
+		snap.Timeline = append(snap.Timeline, TimelineEntry{
+			Timestamp: e.Timestamp, Description: e.Description,
+			Category: string(e.Category), Entity: e.Entity, EvidenceRefs: e.EvidenceRefs,
+		})
+	}
 	if s.Graph != nil {
 		for _, n := range s.Graph.Nodes {
 			snap.Graph.Nodes = append(snap.Graph.Nodes, GraphNode{ID: n.ID, Type: string(n.Type), Label: n.Label})

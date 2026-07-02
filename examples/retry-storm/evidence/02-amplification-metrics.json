@@ -1,0 +1,19 @@
+{
+  "batch": "02-amplification-metrics",
+  "description": "Request rate spike consistent with retry storm.",
+  "evidence": [
+    {
+      "category": "metrics",
+      "entity": "gateway",
+      "id": "metric-1",
+      "payload": {
+        "baseline_rps": 850,
+        "request_rate_rps": 8500,
+        "source": "datadog"
+      },
+      "source": "datadog",
+      "summary": "request rate 10x amplification consistent with a retry storm",
+      "timestamp": "2026-06-27T09:01:00Z"
+    }
+  ]
+}

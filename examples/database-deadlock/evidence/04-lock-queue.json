@@ -1,0 +1,78 @@
+{
+  "batch": "04-lock-queue",
+  "description": "Traces and pg_locks show queued writers behind long DELETE.",
+  "evidence": [
+    {
+      "category": "trace_events",
+      "entity": "auth-api",
+      "id": "trace-1",
+      "payload": {
+        "operation": "renameIdentityProvider",
+        "span_kind": "server"
+      },
+      "source": "datadog",
+      "summary": "write span 105.9s completed",
+      "timestamp": "2026-06-27T09:10:00Z"
+    },
+    {
+      "category": "trace_events",
+      "entity": "auth-api",
+      "id": "trace-2",
+      "payload": {
+        "operation": "renameIdentityProvider",
+        "span_kind": "server"
+      },
+      "source": "datadog",
+      "summary": "write span 26.7s completed",
+      "timestamp": "2026-06-27T09:10:00Z"
+    },
+    {
+      "category": "database_events",
+      "entity": "identity_provider:pk-42",
+      "id": "db-del",
+      "payload": {
+        "duration_ms": 222900,
+        "rows_affected": 1
+      },
+      "source": "datadog",
+      "summary": "DELETE on primary key row held lock 222.9s",
+      "timestamp": "2026-06-27T09:10:00Z"
+    },
+    {
+      "category": "database_events",
+      "entity": "identity_provider:pk-42",
+      "id": "db-w1",
+      "payload": {
+        "duration_ms": 180000,
+        "rows_affected": 0
+      },
+      "source": "datadog",
+      "summary": "UPDATE queued behind lock",
+      "timestamp": "2026-06-27T09:10:00Z"
+    },
+    {
+      "category": "database_events",
+      "entity": "identity_provider:pk-42",
+      "id": "db-w2",
+      "payload": {
+        "duration_ms": 150000,
+        "rows_affected": 0
+      },
+      "source": "datadog",
+      "summary": "UPDATE queued behind lock",
+      "timestamp": "2026-06-27T09:10:00Z"
+    },
+    {
+      "category": "database_events",
+      "entity": "identity_provider:pk-42",
+      "id": "db-w3",
+      "payload": {
+        "duration_ms": 120000,
+        "rows_affected": 0
+      },
+      "source": "datadog",
+      "summary": "UPDATE queued behind lock",
+      "timestamp": "2026-06-27T09:10:00Z"
+    }
+  ]
+}

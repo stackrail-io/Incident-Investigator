@@ -1,0 +1,22 @@
+{
+  "batch": "01-deploy",
+  "description": "Production rollout of checkout-api v2.4.0 via CI pipeline.",
+  "evidence": [
+    {
+      "category": "deployment_events",
+      "entity": "checkout-api",
+      "id": "dep-1",
+      "payload": {
+        "commit": "a1b2c3d",
+        "deploy_id": "dep-checkout-8842",
+        "environment": "production",
+        "new_deploy": true,
+        "pipeline": "github-actions",
+        "version": "v2.4.0"
+      },
+      "source": "datadog",
+      "summary": "Deployed checkout-api v2.4.0 to production",
+      "timestamp": "2026-06-27T09:01:00Z"
+    }
+  ]
+}

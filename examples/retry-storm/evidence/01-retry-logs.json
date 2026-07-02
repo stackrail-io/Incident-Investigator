@@ -1,0 +1,20 @@
+{
+  "batch": "01-retry-logs",
+  "description": "Gateway logs show cascading timeouts and retries.",
+  "evidence": [
+    {
+      "category": "application_logs",
+      "entity": "gateway",
+      "id": "log-1",
+      "payload": {
+        "level": "error",
+        "retry_count": 47,
+        "service": "",
+        "upstream": "payments-api"
+      },
+      "source": "datadog",
+      "summary": "request timeout; retrying with backoff",
+      "timestamp": "2026-06-27T09:00:00Z"
+    }
+  ]
+}
